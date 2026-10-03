@@ -17,6 +17,14 @@
   <script src="/js/kiala-ui.js" defer></script>
   <!-- Filerobot Image Editor (Alternativa a Canva) -->
   <script src="https://scaleflex.cloudimg.io/v7/plugins/filerobot-image-editor/latest/filerobot-image-editor.min.js"></script>
+  
+  <!-- SUPABASE (Base de Datos) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js" defer></script>
+  
+  <!-- SUPABASE (Base de Datos) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase-client.js" defer></script>
 
   <style>
     :root { font-size: 16px; }
@@ -250,6 +258,9 @@
       </button>
       <button onclick="toggleArtifactPanel()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
         <i data-lucide="layout" class="w-4 h-4 text-neutral-400"></i><span class="hidden sm:inline">Estudio</span>
+      </button>
+      <button id="btn-portal-cliente" onclick="handleClientPortalClick()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
+        <i data-lucide="user" class="w-4 h-4 text-neutral-400"></i><span class="hidden sm:inline">Portal Cliente</span>
       </button>
       
       <div class="h-6 w-px bg-[#1F1F28] mx-1"></div>
@@ -697,6 +708,9 @@
               <i data-lucide="file-code" class="w-4 h-4 text-neutral-500 ml-2"></i>
               <select id="artifact-file-select" onchange="loadSpecificFile(this.value)" class="bg-transparent text-neutral-300 text-xs outline-none cursor-pointer hover:text-white max-w-[100px] truncate">
                   <option value="index.html">index.html</option>
+                  <option value="js/supabase-client.js">js/supabase-client.js</option>
+                  <option value="js/kiala-ui.js">js/kiala-ui.js</option>
+                  <option value="css/kiala-ui.css">css/kiala-ui.css</option>
                   <option value="style.css">style.css</option>
                   <option value="script.js">script.js</option>
               </select>
@@ -1648,6 +1662,10 @@
     }
 
     function applyEditorToPreview() {
+        const fileSel = document.getElementById('artifact-file-select');
+        const filename = fileSel ? fileSel.value : 'index.html';
+        if (filename && !filename.endsWith('.html')) return; // No actualizar vista previa para archivos JS/CSS
+        
         const editor = document.getElementById('artifact-editor');
         if (!editor) return;
         const code = editor.value;
@@ -1723,13 +1741,20 @@
         if (!editor) return;
         const content = editor.value;
         
+        const fileSel = document.getElementById('artifact-file-select');
+        const filename = fileSel ? fileSel.value : 'index.html';
+        
         try {
             const res = await fetch('/api/workspace/save', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ client_name: wsName.replace('📁 ', '').trim(), html_content: content })
+                body: JSON.stringify({ 
+                    client_name: wsName.replace('📁 ', '').trim(), 
+                    html_content: content,
+                    filename: filename
+                })
             });
             if (res.ok) {
-                alert("🎉 ¡Código guardado con éxito en el Workspace '" + wsName + "'! Ya puedes recargar la página para ver los cambios aplicados.");
+                alert("🎉 ¡Código guardado con éxito en '" + filename + "' dentro del Workspace '" + wsName + "'!");
             } else {
                 alert("❌ Error al guardar en el Workspace. Código de estado: " + res.status);
             }

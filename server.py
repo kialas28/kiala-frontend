@@ -182,12 +182,14 @@ async def save_to_workspace(request: Request):
         data = await request.json()
         html_content = data.get("html_content", "")
         client_name = data.get("client_name", "default_project")
+        filename = data.get("filename", "index.html")
         ws_dir = WORKSPACE_BASE / client_name
         ws_dir.mkdir(parents=True, exist_ok=True)
-        file_path = ws_dir / "index.html"
+        file_path = ws_dir / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(html_content)
-        return {"status": "success", "message": f"Guardado exitosamente en {client_name}/index.html"}
+        return {"status": "success", "message": f"Guardado exitosamente en {client_name}/{filename}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
