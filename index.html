@@ -1,7 +1,6 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-    <base href="http://localhost:8080/workspaces/kiala_frontend_dev/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kiala's AI Studio Pro</title>
@@ -1130,7 +1129,6 @@
             // Crear nuevo workspace con index.html base
             finalWsName = nameInput.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now().toString().slice(-4);
             const baseHtml = `<!DOCTYPE html>\n<html lang="es" class="dark">\n<head>
-    <base href="http://localhost:8080/workspaces/kiala_frontend_dev/">\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${nameInput}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-[#050505] text-neutral-200 min-h-screen flex flex-col items-center justify-center font-sans">\n  <h1 class="text-4xl font-bold text-[#C4A77D] mb-4">¡Hola desde ${nameInput}!</h1>\n  <p class="text-neutral-500">Tu lienzo está listo. Pídele a la IA que empiece a diseñar.</p>\n</body>\n</html>`;
             
             try {
                 await fetch('/api/workspace/save', {
