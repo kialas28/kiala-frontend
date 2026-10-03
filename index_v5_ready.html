@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiala's AI Studio Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- NUEVOS ARCHIVOS DE UI -->
+  <link rel="stylesheet" href="/css/kiala-ui.css">
+  <script src="/js/kiala-ui.js" defer></script>
+
+  <style>
+    :root { font-size: 16px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #050505;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+      color: #E2E2E6;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .brand-kiala {
+      background: linear-gradient(135deg, #E6DAC8 0%, #C4A77D 50%, #8F7449 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gemini-composer-wrapper {
+      position: relative;
+      background: #111116;
+      border-radius: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .gemini-composer-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -2.5px;
+      border-radius: 1.65rem;
+      padding: 2.5px;
+      background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570, #F4B400, #4285F4);
+      background-size: 200% 200%;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.15;
+      filter: blur(2px);
+      transition: opacity 0.5s ease, filter 0.5s ease;
+      animation: geminiFlow 15s linear infinite;
+      pointer-events: none;
+    }
+    .gemini-composer-wrapper:focus-within::before {
+      opacity: 0.4;
+      filter: blur(4px);
+      animation: geminiFlow 8s linear infinite;
+    }
+    .gemini-composer-wrapper.is-thinking::before {
+      opacity: 1;
+      filter: blur(8px);
+      background-size: 300% 300%;
+      animation: geminiFlow 1.5s linear infinite, pulseGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes geminiFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+    @keyframes pulseGlow { 0% { opacity: 0.7; filter: blur(6px); } 100% { opacity: 1; filter: blur(10px); } }
+
+    .hero-active #chat-stream-box { display: none; }
+    .hero-active #hero-greeting-center { display: flex; }
+    .hero-active #composer-outer-container { margin-top: 2.5rem; margin-bottom: auto; }
+
+    .max-w-3xl, .max-w-4xl { max-width: 64rem !important; }
+    
+    #modo-estudio-panel { 
+      flex: none !important; 
+      margin: 1rem 1rem 1rem 0;
+      border-radius: 1.5rem;
+      height: calc(100vh - 2rem);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      border: 1px solid #22222E;
+    }
+    
+    pre { max-height: 500px !important; overflow-y: auto !important; border-radius: 0.5rem !important; }
+    
+    /* Scrollbars Minimalistas */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(196, 167, 125, 0.1); border-radius: 10px; transition: background 0.3s ease; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(196, 167, 125, 0.4); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(196, 167, 125, 0.1) transparent; }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none text-neutral-300">
+
+  <!-- PANTALLA DE LOGIN CON MASTER KEY -->
+  <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="relative z-10 w-full max-w-md p-10 bg-[#101015]/90 backdrop-blur-xl border border-[#1A1A22] rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-col items-center">
+      <img src="/static/logo.png" class="w-32 h-32 object-contain mb-6 filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" onerror="this.style.display='none'">
+      <h2 class="text-3xl font-medium text-neutral-200 tracking-widest mb-1 brand-kiala">KIALA STUDIO</h2>
+      <p class="text-sm text-neutral-500 mb-8 font-mono uppercase tracking-widest">Acceso Restringido</p>
+      
+      <form id="login-form" onsubmit="handleLogin(event)" class="w-full space-y-5">
+        <div>
+          <label class="block text-xs font-mono text-neutral-500 uppercase tracking-wider mb-2">Email de Acceso</label>
+          <input type="email" id="login-email" required class="w-full bg-[#14141A] border border-[#22222E] rounded-xl px-4 py-3 text-base text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition shadow-inner" placeholder="oficial@kialashq.com">
+        </div>
+        <div>
+          <label class="block text-xs font-mono text-neutral-500 uppercase tracking-wider mb-2">Contraseña Maestra</label>
+          <input type="password" id="login-password" required class="w-full bg-[#14141A] border border-[#22222E] rounded-xl px-4 py-3 text-base text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition shadow-inner" placeholder="••••••••">
+        </div>
+        <button type="submit" id="login-btn" class="w-full mt-4 bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold text-base py-3.5 rounded-xl transition shadow-[0_0_20px_rgba(196,167,125,0.25)]">
+          Ingresar al Sistema
+        </button>
+        <p id="login-error" class="text-rose-400 text-sm text-center hidden mt-3 font-medium"></p>
+        <button type="button" onclick="resetMasterPassword()" class="w-full text-center text-xs text-neutral-500 hover:text-[#C4A77D] mt-4 transition">¿Restablecer sesión maestra?</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="h-16 border-b border-[#1A1A22] bg-[#0E0E13]/80 backdrop-blur-md px-5 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center space-x-4">
+      <button id="btn-k-toggle" onclick="toggleSidebar()" class="group flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[#16161D] transition" title="Alternar barra lateral">
+        <img src="/static/logo.png" class="h-14 w-14 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" alt="K" onerror="this.style.display='none'">
+      </button>
+      <div class="flex items-baseline space-x-2 text-left">
+        <span class="font-bold text-xl tracking-wider brand-kiala">KIALA'S</span>
+        <span class="font-light text-sm tracking-widest text-neutral-400">AI STUDIO</span>
+      </div>
+      <div class="h-6 w-px bg-[#1F1F28] mx-2"></div>
+      <div id="breadcrumb-capsule" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-[#14141A]/80 border border-[#22222E] backdrop-blur-md text-sm text-neutral-300 shadow-inner">
+        <span id="header-session-title" class="truncate max-w-xs text-[#C4A77D] font-medium">Conversación</span>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleModal('modal-vault')" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-emerald-400 hover:text-emerald-300 transition shadow-sm" title="Bóveda de Seguridad">
+        <i data-lucide="shield" class="w-5 h-5"></i>
+      </button>
+      <button onclick="toggleModal('modal-extensions')" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-blue-400 hover:text-blue-300 transition shadow-sm" title="Extensiones y Plugins">
+        <i data-lucide="puzzle" class="w-5 h-5"></i>
+      </button>
+      <div class="h-6 w-px bg-[#1F1F28] mx-1"></div>
+      
+      <button onclick="openPromptLab()" class="flex items-center space-x-2 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition shadow-sm font-medium">
+        <i data-lucide="flask-conical" class="w-4 h-4"></i><span>Lab Prompts</span>
+      </button>
+      <button onclick="exportChatMarkdown()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
+        <i data-lucide="download" class="w-4 h-4 text-neutral-400"></i><span>Exportar</span>
+      </button>
+      <button onclick="toggleSettingsModal()" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-[#C4A77D] transition shadow-sm">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY CONTENT -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- SIDEBAR -->
+    <aside id="left-panel" class="w-72 border-r border-[#1A1A22] bg-[#0C0C10] flex flex-col shrink-0 overflow-hidden transition-all duration-300">
+      <div id="view-project-detail" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-[#181820] bg-[#101015]">
+          <div class="flex items-center justify-between gap-2">
+            <button id="btn-new-chat" onclick="createSession(false)" class="flex-1 text-sm bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold px-3 py-2 rounded-lg transition shadow-md flex items-center justify-center gap-1">
+              <i data-lucide="message-square-plus" class="w-4 h-4"></i> Nuevo
+            </button>
+            <button onclick="createSession(true)" class="flex-1 text-sm bg-[#1A1A22] hover:bg-[#22222E] border border-[#2A2A38] text-neutral-300 font-medium px-3 py-2 rounded-lg transition shadow-md flex items-center justify-center gap-1" title="Chat Temporal (No se guarda)">
+              <i data-lucide="ghost" class="w-4 h-4"></i> Temp
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-3 border-b border-[#15151C]">
+          <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-500"></i>
+            <input id="search-projects-input" oninput="filterProjects()" type="text" placeholder="Buscar chat..." class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl pl-9 pr-3 py-2 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 focus:ring-1 focus:ring-[#C4A77D]/30 transition placeholder-neutral-600 shadow-inner">
+          </div>
+        </div>
+
+        <div id="project-chats-container" class="flex-1 overflow-y-auto p-3 space-y-1.5"></div>
+        
+        <div id="sidebar-tokens-box" class="mx-3 my-2 p-2.5 rounded-lg bg-[#14141B] border border-[#22222E] flex items-center justify-between text-xs shadow-inner">
+            <span class="flex items-center gap-1.5 text-neutral-400 font-medium">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i> Tokens Sesión:
+            </span>
+            <span id="sidebar-tokens-val" class="font-mono text-cyan-400 font-bold">0</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT CANVAS -->
+    <main id="main-content-canvas" class="flex-1 min-w-0 flex flex-col relative hero-active">
+      <div id="hero-greeting-center" class="hidden flex-1 flex-col items-center justify-center p-6 text-center select-none">
+        <img src="/static/logo.png" class="w-80 h-80 object-contain mb-2 filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" onerror="this.style.display='none'">
+        <h1 class="text-4xl font-medium text-neutral-200 tracking-tight mb-3">¡Es tu turno!</h1>
+        <p class="text-base text-neutral-500 max-w-md">Kiala's AI Studio está listo. Explora tus proyectos o formula cualquier consulta.</p>
+      </div>
+
+      <div id="chat-stream-box" class="flex-1 overflow-y-auto p-6 select-text">
+        <div id="chat-messages-container" class="max-w-4xl mx-auto space-y-6"></div>
+      </div>
+
+      <div id="composer-outer-container" class="p-4 transition-all duration-300">
+        <div class="max-w-4xl mx-auto flex flex-col space-y-2">
+          <div id="attachments-bar" class="hidden flex flex-wrap gap-2 px-2"></div>
+
+          <div id="composer-box" class="gemini-composer-wrapper flex flex-col p-4 shadow-2xl" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <div class="flex items-center space-x-3">
+              <input type="file" id="file-input" multiple accept="image/*,application/pdf,.txt,.py,.js,.json,.csv,.md" class="hidden" onchange="handleFileSelect(this.files)">
+              
+              <button onclick="document.getElementById('file-input').click()" class="p-2.5 text-neutral-400 hover:text-white rounded-xl hover:bg-[#1A1A22] transition shrink-0" title="Adjuntar archivos">
+                <i data-lucide="paperclip" class="w-5 h-5"></i>
+              </button>
+
+              <textarea id="prompt-input" rows="1" class="w-full bg-transparent resize-none outline-none text-base leading-relaxed text-neutral-100 placeholder-neutral-500 select-text max-h-48" placeholder="Pregúntale a Gemini 3... (arrastra PDFs o código)" onkeydown="handleKeyDown(event)" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+
+              <button id="send-btn" onclick="sendChatMessage()" class="bg-[#1C1C26] hover:bg-[#262634] border border-[#2E2E3E] text-neutral-200 hover:text-white p-3 rounded-xl transition shadow flex items-center justify-center shrink-0">
+                <i data-lucide="send" class="w-5 h-5 text-[#C4A77D]"></i>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 mt-3 border-t border-[#1A1A22] text-sm">
+              <div class="flex items-center space-x-3">
+                <div class="flex items-center bg-[#15151C] px-3 py-1.5 rounded-xl border border-[#22222E]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mr-2"></span>
+                  <select id="model-select" class="bg-transparent text-neutral-300 text-sm outline-none cursor-pointer hover:text-white font-medium">
+                    <option value="auto-router" class="bg-[#14141A]">⚡ Auto-Router</option>
+                    <option value="gemini-3.1-pro-preview" class="bg-[#14141A]">Gemini 3.1 Pro Preview</option>
+                    <option value="gemini-3.8-flash" class="bg-[#14141A]">Gemini 3.8 Flash</option>
+                    <option value="claude-3.5-sonnet" class="bg-[#14141A]">Claude 3.5 Sonnet</option>
+                    <option value="llama-3.1-405b" class="bg-[#14141A]">Meta Llama 3.1 (405B)</option>
+                    <option value="imagen-3" class="bg-[#14141A]">🎨 Imagen 3 (Lienzo Visual)</option>
+                  </select>
+                </div>
+
+                <label class="flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-xl hover:bg-[#181820] text-neutral-400 hover:text-neutral-200 transition border border-transparent hover:border-[#22222E]">
+                  <input id="chk-grounding" type="checkbox" class="w-3.5 h-3.5 rounded bg-[#1C1C24] border-[#2A2A38] text-[#C4A77D] focus:ring-0">
+                  <span class="text-sm">Búsqueda Web</span>
+                </label>
+
+                <div class="inline-flex items-center ml-3">
+                    <select id="workspace-select" onchange="loadWorkspaceFiles(this.value)" class="bg-zinc-800 text-zinc-200 text-xs font-medium rounded-lg px-2.5 py-1.5 border border-zinc-600 hover:border-zinc-400 focus:outline-none cursor-pointer shadow-inner transition">
+                        <option value="">📁 Sin Workspace...</option>
+                    </select>
+                </div>
+              </div>
+
+              <div class="relative">
+                <button onclick="toggleBalanceFlyout()" class="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#15151C] hover:bg-[#1C1C26] border border-[#22222E] font-mono text-sm text-neutral-300 transition">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"></span>
+                  <span id="chip-balance">
+                    <div class="flex items-center gap-3 text-sm font-mono bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
+                        <span class="flex items-center gap-1 text-green-400"><i data-lucide="timer" class="w-4 h-4"></i><span id="telemetryTime">0.0s</span></span>
+                    </div>
+                  </span>
+                </button>
+                
+                <div id="balance-flyout" class="hidden absolute bottom-10 right-0 mb-2 w-72 bg-[#111115] border border-[#22222C] rounded-2xl shadow-2xl p-4 z-50">
+                  <div class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Vertex AI</div>
+                  <div class="space-y-2 font-mono text-sm">
+                    <div class="flex justify-between"><span class="text-neutral-500">Restante:</span><span id="fly-remaining" class="text-emerald-400 font-bold">$0.00</span></div>
+                    <div class="flex justify-between"><span class="text-neutral-500">Gastado:</span><span id="fly-spent" class="text-rose-400">$0.00</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MODALES DE CONFIGURACIÓN -->
+  <div id="modal-vault" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-emerald-400 font-mono font-bold flex items-center gap-2"><i data-lucide="shield" class="w-5 h-5"></i> Bóveda de Seguridad</h3>
+        <button onclick="toggleModal('modal-vault')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-4">Gestión de claves API y variables de entorno encriptadas para las herramientas.</p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Google Gemini API Key</label>
+          <input type="password" id="api-key-gemini" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="AIzaSy...">
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">OpenAI API Key</label>
+          <input type="password" id="api-key-openai" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="sk-...">
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button onclick="toggleModal('modal-vault')" class="px-4 py-2 rounded-lg text-sm text-neutral-400 hover:bg-[#1A1A22] transition">Cancelar</button>
+        <button onclick="saveApiKeys()" class="px-4 py-2 rounded-lg text-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition shadow-[0_0_15px_rgba(52,211,153,0.1)]">Guardar Claves</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-extensions" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-blue-400 font-mono font-bold flex items-center gap-2"><i data-lucide="puzzle" class="w-5 h-5"></i> Extensiones y Herramientas</h3>
+        <button onclick="toggleModal('modal-extensions')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-4">Activa o desactiva las herramientas del sistema (System Tools) para la IA.</p>
+      <div class="space-y-2">
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="globe" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Búsqueda Web (Grounding)</div>
+              <div class="text-xs text-neutral-500">Permite a la IA buscar en internet en tiempo real.</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-web-search" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="folder-search" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Lector de Workspace</div>
+              <div class="text-xs text-neutral-500">Acceso de lectura y escritura a archivos locales.</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-workspace" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="toggleModal('modal-extensions')" class="px-4 py-2 rounded-lg text-sm bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition shadow-[0_0_15px_rgba(59,130,246,0.1)]">Aplicar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA REDIMENSIONADORA -->
+    <div id="panel-resizer" class="resizer-bar"></div>
+
+    <!-- ARTIFACT PANEL (MODO ESTUDIO) -->
+    <aside id="modo-estudio-panel" class="hidden gemini-composer-wrapper flex-col shrink-0 z-20 overflow-hidden bg-[#0C0C0F] relative" style="width: 50%; min-width: 400px;">
+      
+      <div class="h-14 border-b border-[#181820] px-4 flex items-center justify-between bg-[#111116] relative z-10">
+        <div class="flex items-center space-x-3 shrink-0">
+          <span class="text-[#C4A77D] text-sm">⚡</span>
+          <span id="artifact-title" class="font-mono text-sm font-semibold text-neutral-200 truncate max-w-[150px]">Modo Estudio</span>
+          <span id="artifact-lang-tag" class="text-xs uppercase font-mono px-2 py-0.5 rounded bg-[#181824] text-[#C4A77D] border border-[#262636]">WEB</span>
+          
+          <div class="hidden md:flex items-center space-x-2 ml-2 border-l border-[#242432] pl-3">
+              <i data-lucide="folder-tree" class="w-4 h-4 text-neutral-500"></i>
+              <select id="artifact-workspace-select" onchange="loadWorkspaceFiles(this.value)" class="bg-transparent text-neutral-300 text-xs outline-none cursor-pointer hover:text-white">
+                  <option value="">Workspace...</option>
+              </select>
+              
+              <i data-lucide="file-code" class="w-4 h-4 text-neutral-500 ml-2"></i>
+              <select id="artifact-file-select" onchange="loadSpecificFile(this.value)" class="bg-transparent text-neutral-300 text-xs outline-none cursor-pointer hover:text-white max-w-[100px] truncate">
+                  <option value="index.html">index.html</option>
+                  <option value="style.css">style.css</option>
+                  <option value="script.js">script.js</option>
+              </select>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-2 shrink-0 overflow-x-auto no-scrollbar">
+          <!-- PESTAÑAS: SOLO CÓDIGO Y VISTA PREVIA -->
+          <div class="flex bg-[#16161E] p-1 rounded-xl border border-[#242432] text-sm shrink-0">
+            <button id="btn-tab-code" onclick="switchArtifactTab('code')" class="px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors">Código</button>
+            <button id="btn-tab-preview" onclick="switchArtifactTab('preview')" class="px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors">Vista Previa</button>
+          </div>
+          
+          <div class="hidden xl:flex items-center gap-1 ml-2 shrink-0">
+            <button onclick="setDeviceView('desktop')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Desktop"><i data-lucide="monitor" class="w-4 h-4"></i></button>
+            <button onclick="setDeviceView('tablet')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Tablet"><i data-lucide="tablet" class="w-4 h-4"></i></button>
+            <button onclick="setDeviceView('mobile')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Mobile"><i data-lucide="smartphone" class="w-4 h-4"></i></button>
+          </div>
+          <button onclick="openInNewWindow()" class="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-[#1A1A22] shrink-0" title="Abrir en nueva pestaña"><i data-lucide="external-link" class="w-4 h-4"></i></button>
+          <button onclick="saveToWorkspace()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-medium flex items-center gap-2 ml-2 transition-colors shadow-sm shrink-0"><i data-lucide="save" class="w-3 h-3"></i> Guardar</button>
+          
+          <!-- BOTÓN DE CERRAR MEJORADO Y VISIBLE -->
+          <button onclick="closeArtifactPanel()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-md text-xs font-bold flex items-center gap-2 ml-2 transition-colors shadow-[0_0_12px_rgba(225,29,72,0.4)] shrink-0" title="Cerrar panel"><i data-lucide="x-circle" class="w-4 h-4"></i> CERRAR</button>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-hidden relative flex justify-center bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+        <div id="artifact-view-code" class="hidden h-full w-full flex-col bg-[#09090C]">
+          <div class="flex-1 flex overflow-hidden relative">
+            <div id="artifact-gutter" class="w-12 bg-[#0A0A0D] border-r border-[#1C1C26] text-neutral-600 font-mono text-xs text-right pr-3 py-5 select-none overflow-hidden leading-6 whitespace-pre">1</div>
+            <textarea id="artifact-editor" class="flex-1 w-full h-full bg-transparent text-neutral-300 font-mono text-sm py-5 px-4 outline-none resize-none overflow-y-auto leading-6 whitespace-pre" spellcheck="false" oninput="updateLineNumbers(); applyEditorToPreview()"></textarea>
+          </div>
+        </div>
+        <div id="artifact-view-preview" class="h-full w-full bg-white flex justify-center">
+          <iframe id="artifact-preview-frame" class="w-full h-full border-0 shadow-2xl transition-all duration-300" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    let allProjects = [];
+    let currentProjectId = null;
+    let currentSessionId = null;
+    let sessionTotalTokens = 0;
+    let currentArtifactCode = '';
+    let attachedFiles = []; 
+    let isLabMode = false;
+    let labSessionId = null;
+    let telemetryTimer = null;
+    let startTime = 0;
+    let currentChatController = null; 
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        if (window.self !== window.top) {
+            document.getElementById('login-screen').classList.add('hidden');
+            await initApp();
+            return;
+        }
+        if (localStorage.getItem('kiala_master_session') === 'active') {
+            document.getElementById('login-screen').classList.add('hidden');
+            await initApp();
+            return;
+        }
+        try {
+            const res = await fetch('/api/auth/check');
+            if (res.ok) {
+                document.getElementById('login-screen').classList.add('hidden');
+                await initApp();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+            }
+        } catch (e) {
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+    });
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        if (email === 'oficial@kialashq.com' && password === 'kiala') {
+            localStorage.setItem('kiala_master_session', 'active');
+            document.getElementById('login-screen').classList.add('hidden');
+            initApp();
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password })
+            });
+            if (res.ok) {
+                document.getElementById('login-screen').classList.add('hidden');
+                initApp();
+            } else {
+                document.getElementById('login-error').textContent = 'Credenciales incorrectas. Usa la cuenta maestra.';
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        } catch (error) {
+            document.getElementById('login-error').textContent = 'Error de conexión';
+            document.getElementById('login-error').classList.remove('hidden');
+        }
+    }
+
+    function resetMasterPassword() {
+        localStorage.removeItem('kiala_master_session');
+        alert('Sesión local restablecida. Usa oficial@kialashq.com y la contraseña: kiala');
+        window.location.reload();
+    }
+
+    async function initApp() {
+        await fetchBalance();
+        await loadWorkspacesDropdown();
+        await loadProjects();
+    }
+
+    async function fetchBalance() {
+        try {
+            const res = await fetch('/api/balance');
+            if (!res.ok) return;
+            const d = await res.json();
+            const rem = document.getElementById('fly-remaining');
+            const spent = document.getElementById('fly-spent');
+            if (rem) rem.textContent = `$${d.remaining_balance.toFixed(4)}`;
+            if (spent) spent.textContent = `$${d.total_spent.toFixed(4)}`;
+        } catch (e) {}
+    }
+
+    function toggleBalanceFlyout() { 
+        const flyout = document.getElementById('balance-flyout');
+        if (flyout) flyout.classList.toggle('hidden'); 
+    }
+    
+    function toggleSidebar() {
+        const s = document.getElementById('left-panel');
+        if (!s) return;
+        if (s.classList.contains('w-72')) { 
+            s.classList.remove('w-72', 'border-r'); 
+            s.classList.add('w-0', 'border-none'); 
+        } else { 
+            s.classList.remove('w-0', 'border-none'); 
+            s.classList.add('w-72', 'border-r'); 
+        }
+    }
+
+    async function loadWorkspacesDropdown() {
+        try {
+            const res = await fetch('/api/workspaces');
+            if (!res.ok) return;
+            const data = await res.json();
+            const select = document.getElementById('workspace-select');
+            const artSelect = document.getElementById('artifact-workspace-select');
+            let optionsHtml = '<option value="">📁 Sin Workspace...</option>';
+            if (Array.isArray(data)) {
+                data.forEach(ws => { optionsHtml += `<option value="${ws}">📁 ${ws}</option>`; });
+            }
+            if (select) select.innerHTML = optionsHtml;
+            if (artSelect) artSelect.innerHTML = optionsHtml;
+        } catch(e) {}
+    }
+
+    async function loadProjects() {
+        try {
+            const res = await fetch('/api/projects');
+            if (!res.ok) return;
+            allProjects = await res.json();
+            if (Array.isArray(allProjects) && allProjects.length > 0 && !currentProjectId) {
+                await openProject(allProjects[0].id, allProjects[0].name);
+            }
+        } catch (e) {}
+    }
+
+    async function createSession(isTemp) {
+        const title = isTemp ? 'Chat Temporal' : 'Nuevo Chat';
+        try {
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ project_id: currentProjectId, is_temp: isTemp, title: title })
+            });
+            if(res.ok) {
+                const newSession = await res.json();
+                await openProject(currentProjectId);
+                selectSession(newSession.id, newSession.title);
+                return;
+            }
+        } catch (e) {
+            console.log("Backend no disponible, usando fallback UI para crear sesión.");
+        }
+        
+        currentSessionId = isTemp ? 'temp_' + Date.now() : 'new_' + Date.now();
+        document.getElementById('header-session-title').textContent = title;
+        document.getElementById('chat-messages-container').innerHTML = '';
+        document.getElementById('main-content-canvas').classList.add('hero-active');
+    }
+
+    async function editSessionName(e, sid, oldTitle) {
+        e.stopPropagation(); 
+        const newTitle = prompt("Nuevo nombre para el chat:", oldTitle);
+        if (!newTitle || newTitle === oldTitle) return;
+        
+        try {
+            await fetch(`/api/sessions/${sid}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title: newTitle })
+            });
+            openProject(currentProjectId);
+        } catch(err) { 
+            console.error(err);
+            alert("Error al renombrar el chat. Verifica la conexión.");
+        }
+    }
+
+    async function deleteSession(e, sid) {
+        e.stopPropagation(); 
+        if (!confirm("¿Estás seguro de eliminar este chat permanentemente?")) return;
+        
+        try {
+            await fetch(`/api/sessions/${sid}`, { method: 'DELETE' });
+            if (currentSessionId === sid) {
+                currentSessionId = null;
+                document.getElementById('chat-messages-container').innerHTML = '';
+                document.getElementById('main-content-canvas').classList.add('hero-active');
+                document.getElementById('header-session-title').textContent = 'Conversación';
+            }
+            openProject(currentProjectId);
+        } catch(err) { 
+            console.error(err);
+            alert("Error al eliminar el chat. Verifica la conexión.");
+        }
+    }
+
+    async function openProject(pid, pname) {
+        currentProjectId = pid;
+        try {
+            const res = await fetch(`/api/projects/${pid}/sessions`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const chatsCont = document.getElementById('project-chats-container');
+            if(chatsCont) {
+                chatsCont.innerHTML = '';
+                if (data.sessions && Array.isArray(data.sessions)) {
+                    data.sessions.forEach(s => {
+                        const item = document.createElement('div');
+                        const isAct = s.id === currentSessionId;
+                        item.className = `group flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition ${isAct ? 'bg-[#181824] text-[#C4A77D] border border-[#C4A77D]/30 font-medium' : 'text-neutral-400 hover:bg-[#14141B] hover:text-neutral-200'}`;
+                        
+                        item.innerHTML = `
+                            <span class="truncate flex-1 pr-2" onclick="selectSession('${s.id}', '${escapeHtml(s.title)}')">${escapeHtml(s.title)}</span>
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editSessionName(event, '${s.id}', '${escapeHtml(s.title)}')" class="p-1.5 text-neutral-500 hover:text-[#C4A77D] rounded-md hover:bg-[#22222E] transition" title="Renombrar"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="deleteSession(event, '${s.id}')" class="p-1.5 text-neutral-500 hover:text-rose-400 rounded-md hover:bg-[#22222E] transition" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        `;
+                        chatsCont.appendChild(item);
+                    });
+                    if (window.lucide) lucide.createIcons();
+                    if (!currentSessionId && data.sessions.length > 0) {
+                        selectSession(data.sessions[0].id, data.sessions[0].title);
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    async function selectSession(sid, title = '') {
+        currentSessionId = sid;
+        const titleEl = document.getElementById('header-session-title');
+        if (titleEl) titleEl.textContent = title;
+        const box = document.getElementById('chat-messages-container');
+        if(box) box.innerHTML = '';
+        try {
+            const res = await fetch(`/api/sessions/${sid}`);
+            if (!res.ok) return;
+            const d = await res.json();
+            const canvas = document.getElementById('main-content-canvas');
+            if (canvas) {
+                if (d.messages && Array.isArray(d.messages) && d.messages.length > 0) {
+                    canvas.classList.remove('hero-active');
+                    d.messages.forEach(m => appendMessageUI(m.role, m.content));
+                } else {
+                    canvas.classList.add('hero-active');
+                }
+            }
+        } catch (e) {}
+    }
+
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    }
+
+    function appendMessageUI(role, content) {
+        const box = document.getElementById('chat-messages-container');
+        const canvas = document.getElementById('main-content-canvas');
+        if (!box) return null;
+        if (canvas) canvas.classList.remove('hero-active');
+        
+        const isUser = role === 'user';
+        const row = document.createElement('div');
+        row.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-2 w-full`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-3xl rounded-3xl p-5 text-base leading-relaxed ${isUser ? 'bg-[#181822] border border-[#2A2A38] text-neutral-100 rounded-br-none shadow-lg' : 'bg-transparent text-neutral-200 prose prose-invert max-w-none w-full'}`;
+        
+        if (isUser) {
+            bubble.textContent = content;
+            if (window.currentSendingAttachments && window.currentSendingAttachments.length > 0) {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'flex flex-wrap gap-2 mt-3';
+                window.currentSendingAttachments.forEach(f => {
+                    if (f.mime_type && f.mime_type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = `data:${f.mime_type};base64,${f.data}`;
+                        img.className = 'h-24 w-auto rounded-xl border border-[#2A2A38] shadow-md cursor-pointer hover:scale-105 transition-transform';
+                        img.onclick = () => {
+                            const w = window.open('');
+                            w.document.write(`<body style="margin:0;background:#050505;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%;border-radius:12px;"></body>`);
+                        };
+                        imgContainer.appendChild(img);
+                    }
+                });
+                bubble.appendChild(imgContainer);
+            }
+        } else {
+            let htmlContent = marked.parse(content);
+            htmlContent = htmlContent.replace(/&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH[\s\S]*?=======[\s\S]*?&gt;&gt;&gt;&gt;&gt;&gt;&gt;( REPLACE)?/g, 
+                '<div class="my-3 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-xs flex items-center space-x-3 shadow-inner select-none"><span class="text-base">⚡</span><span class="font-medium text-neutral-200">Cirugía de código aplicada en Sandbox</span></div>');
+            bubble.innerHTML = htmlContent;
+            formatCodeBlocks(bubble);
+        }
+        
+        row.appendChild(bubble);
+        box.appendChild(row);
+        
+        const scrollBox = document.getElementById('chat-stream-box');
+        if (scrollBox) scrollBox.scrollTop = scrollBox.scrollHeight;
+        
+        return bubble;
+    }
+
+    function stopChatGeneration() {
+        if (currentChatController) {
+            currentChatController.abort();
+            currentChatController = null;
+        }
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById('prompt-input');
+        if (!input) return;
+        const text = input.value.trim();
+        if (!text || !currentSessionId) return;
+
+        window.currentSendingAttachments = [...attachedFiles];
+        const payloadAttachments = [...attachedFiles];
+        attachedFiles = [];
+        renderAttachmentsBar();
+
+        appendMessageUI('user', text);
+        input.value = ''; input.style.height = 'auto';
+        window.currentSendingAttachments = null;
+        
+        const btn = document.getElementById('send-btn');
+        const composerBox = document.getElementById('composer-box');
+        const artifactPanel = document.getElementById('modo-estudio-panel');
+        
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="square" class="w-5 h-5 text-rose-400 fill-current"></i>';
+            btn.onclick = stopChatGeneration;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        if (composerBox) composerBox.classList.add('is-thinking');
+        if (artifactPanel) artifactPanel.classList.add('is-thinking');
+        
+        startTime = Date.now();
+        clearInterval(telemetryTimer);
+        telemetryTimer = setInterval(() => {
+            const tel = document.getElementById('telemetryTime');
+            if (tel) tel.innerText = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+        }, 100);
+
+        const modelSel = document.getElementById('model-select');
+        const groundChk = document.getElementById('chk-grounding');
+        const wsSel = document.getElementById('workspace-select');
+        
+        const model = modelSel ? modelSel.value : 'auto-router';
+        const grounding = groundChk ? groundChk.checked : false;
+        const wsName = wsSel ? wsSel.value : '';
+
+        const streamBubble = appendMessageUI('model', '...');
+        let rawText = '';
+
+        currentChatController = new AbortController();
+
+        try {
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                signal: currentChatController.signal,
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    message: text,
+                    model: model,
+                    enable_grounding: grounding,
+                    workspace_name: wsName,
+                    attachments: payloadAttachments.map(f => ({
+                        name: f.name,
+                        mime_type: f.mime_type,
+                        data: f.data,
+                        url: `data:${f.mime_type};base64,${f.data}`
+                    }))
+                })
+            });
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const lines = decoder.decode(value).split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const payload = JSON.parse(line.replace('data: ', ''));
+                            if (payload.chunk) {
+                                rawText += payload.chunk;
+                                let displayHtml = marked.parse(rawText);
+                                displayHtml = displayHtml.replace(/&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH[\s\S]*?=======[\s\S]*?&gt;&gt;&gt;&gt;&gt;&gt;&gt;( REPLACE)?/g, 
+                                    '<div class="my-3 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-xs flex items-center space-x-3 shadow-inner select-none"><span class="text-base">⚡</span><span class="font-medium text-neutral-200 animate-pulse">Aplicando cirugía en Sandbox...</span></div>');
+                                if (streamBubble) {
+                                    streamBubble.innerHTML = displayHtml;
+                                    formatCodeBlocks(streamBubble);
+                                }
+                                
+                                const scrollBox = document.getElementById('chat-stream-box');
+                                if (scrollBox) scrollBox.scrollTop = scrollBox.scrollHeight;
+                            }
+                            if (payload.done) {
+                                applySurgicalDiffIfPresent(rawText);
+                            }
+                        } catch (err) {}
+                    }
+                }
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                if (streamBubble) streamBubble.innerHTML += '<br><br><div class="inline-block px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">🛑 Generación detenida por el usuario.</div>';
+            } else {
+                if (streamBubble) streamBubble.innerHTML = `<div class="text-rose-400">Error: ${err.message}</div>`;
+            }
+        } finally {
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="send" class="w-5 h-5 text-[#C4A77D]"></i>';
+                btn.onclick = sendChatMessage;
+                if (window.lucide) lucide.createIcons();
+                btn.disabled = false;
+            }
+            if (composerBox) composerBox.classList.remove('is-thinking');
+            if (artifactPanel) artifactPanel.classList.remove('is-thinking');
+            clearInterval(telemetryTimer);
+            currentChatController = null;
+        }
+    }
+
+    async function applyDirectDiff(rawDiff, btnElement) {
+        const editor = document.getElementById('artifact-editor');
+        const wsSel = document.getElementById('workspace-select');
+        const ws = wsSel ? wsSel.value.replace('📁 ', '').trim() : '';
+        
+        let currentCode = editor ? editor.value : '';
+        if (!currentCode || !currentCode.includes('<html')) {
+            if (ws) {
+                try {
+                    const res = await fetch(`/workspaces/${ws}/index.html?t=${Date.now()}`);
+                    if (res.ok) currentCode = await res.text();
+                } catch(e) {}
+            }
+        }
+
+        if (!currentCode) {
+            alert("No hay código base. Selecciona el workspace primero.");
+            return;
+        }
+
+        let normCode = currentCode.replace(/\r\n/g, '\n');
+        let normDiff = rawDiff.replace(/\r\n/g, '\n');
+
+        const diffRegexDirect = /<<<<<<<\s*SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>>(?:\s*REPLACE)?/g;
+        let match;
+        let appliedCount = 0;
+
+        while ((match = diffRegexDirect.exec(normDiff)) !== null) {
+            const search = match[1];
+            const replace = match[2];
+
+            if (normCode.includes(search)) {
+                normCode = normCode.replace(search, replace);
+                appliedCount++;
+            } else if (normCode.includes(search.trim())) {
+                normCode = normCode.replace(search.trim(), replace.trim());
+                appliedCount++;
+            }
+        }
+
+        if (appliedCount > 0) {
+            openArtifact('html', normCode);
+            saveToWorkspace();
+            if (btnElement) {
+                btnElement.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ¡Cirugía Aplicada!';
+                btnElement.className = 'w-full bg-blue-600 text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md rounded-lg';
+                if (window.lucide) lucide.createIcons();
+            }
+        } else {
+            alert("El texto a reemplazar no coincide exactamente con el código actual.");
+        }
+    }
+
+    function formatCodeBlocks(container) {
+        if (!container) return;
+        container.querySelectorAll('pre').forEach(pre => {
+            if (pre.dataset.enhanced) return;
+            pre.dataset.enhanced = "true";
+            const code = pre.querySelector('code');
+            const raw = code ? code.textContent : pre.textContent;
+            
+            const btn = document.createElement('button');
+            if (raw.includes('<<<<<<< SEARCH')) {
+                pre.className = "my-3 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-xs shadow-inner select-none";
+                pre.innerHTML = '<div class="flex items-center gap-2 mb-2"><span class="text-base">⚡</span><span class="font-medium text-neutral-200">Parche de cirugía listo para aplicar</span></div>';
+                
+                btn.className = 'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md rounded-lg mt-2';
+                btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4"></i> Aplicar Cirugía a la Web';
+                btn.onclick = () => applyDirectDiff(raw, btn);
+            } else {
+                if (code && window.hljs) hljs.highlightElement(code);
+                pre.className = "relative my-4 rounded-2xl overflow-hidden border border-[#22222C] bg-[#0A0A0D] text-sm shadow-xl";
+                btn.className = 'w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md mt-2 rounded-lg';
+                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i> Ejecutar en Sandbox';
+                btn.onclick = () => openArtifact('html', raw);
+            }
+            pre.parentNode.insertBefore(btn, pre.nextSibling);
+            if (window.lucide) lucide.createIcons();
+        });
+    }
+
+    function openArtifact(lang, rawCode) {
+        currentArtifactCode = rawCode;
+        const panel = document.getElementById('modo-estudio-panel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+        
+        const editor = document.getElementById('artifact-editor');
+        if (editor) editor.value = rawCode;
+        updateLineNumbers();
+        applyEditorToPreview();
+        switchArtifactTab('code');
+    }
+
+    function closeArtifactPanel() {
+        const panel = document.getElementById('modo-estudio-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+            panel.classList.remove('flex');
+        }
+    }
+
+    function switchArtifactTab(tab) {
+        const btnCode = document.getElementById('btn-tab-code');
+        const btnPrev = document.getElementById('btn-tab-preview');
+        const viewCode = document.getElementById('artifact-view-code');
+        const viewPrev = document.getElementById('artifact-view-preview');
+
+        if (!btnCode || !btnPrev || !viewCode || !viewPrev) return;
+
+        btnCode.className = 'px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors';
+        btnPrev.className = 'px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors';
+
+        viewCode.className = 'hidden h-full flex-col bg-[#09090C]';
+        viewPrev.className = 'hidden h-full bg-white justify-center';
+
+        if (tab === 'code') {
+            btnCode.className = 'px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors';
+            viewCode.classList.remove('hidden'); viewCode.classList.add('flex', 'w-full');
+        } else if (tab === 'preview') {
+            btnPrev.className = 'px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors';
+            viewPrev.classList.remove('hidden'); viewPrev.classList.add('flex', 'w-full');
+        }
+    }
+
+    function setDeviceView(type) {
+        const frame = document.getElementById('artifact-preview-frame');
+        if (!frame) return;
+        if(type === 'desktop') { frame.style.width = '100%'; frame.style.maxWidth = '100%'; }
+        else if(type === 'tablet') { frame.style.width = '768px'; frame.style.maxWidth = '768px'; }
+        else if(type === 'mobile') { frame.style.width = '375px'; frame.style.maxWidth = '375px'; }
+    }
+
+    function updateLineNumbers() {
+        const editor = document.getElementById('artifact-editor');
+        const gutter = document.getElementById('artifact-gutter');
+        if (!editor || !gutter) return;
+        const count = (editor.value.match(/\n/g) || []).length + 1;
+        let nums = '';
+        for (let i = 1; i <= count; i++) nums += i + '\n';
+        gutter.textContent = nums;
+    }
+
+    function applyEditorToPreview() {
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        const code = editor.value;
+        currentArtifactCode = code;
+        const frame = document.getElementById('artifact-preview-frame');
+        if (!frame) return;
+        const doc = frame.contentWindow.document;
+        doc.open(); doc.write(code); doc.close();
+    }
+
+    async function applySurgicalDiffIfPresent(text) {
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        
+        let currentCode = editor.value || currentArtifactCode || '';
+        const wsSel = document.getElementById('workspace-select');
+        const wsName = wsSel ? wsSel.value : '';
+        const cleanWs = wsName ? wsName.replace('📁 ', '').trim() : '';
+
+        if (!currentCode || currentCode.includes('Cirugía de código') || !currentCode.includes('<html')) {
+            if (cleanWs) {
+                try {
+                    const res = await fetch(`/workspaces/${cleanWs}/index.html?t=${Date.now()}`);
+                    if (res.ok) currentCode = await res.text();
+                } catch(e) {}
+            }
+        }
+
+        if (!currentCode) return;
+
+        let normCode = currentCode.replace(/\r\n/g, '\n');
+        let normText = text.replace(/\r\n/g, '\n');
+
+        const diffRegexSurgical = /<<<<<<<\s*SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>>(?:\s*REPLACE)?/g;
+        let match;
+        let applied = false;
+
+        while ((match = diffRegexSurgical.exec(normText)) !== null) {
+            let searchBlock = match[1];
+            let replaceBlock = match[2];
+
+            if (normCode.includes(searchBlock)) {
+                normCode = normCode.replace(searchBlock, replaceBlock);
+                applied = true;
+            } else if (normCode.includes(searchBlock.trim())) {
+                normCode = normCode.replace(searchBlock.trim(), replaceBlock.trim());
+                applied = true;
+            }
+        }
+
+        if (applied) {
+            editor.value = normCode;
+            currentArtifactCode = normCode;
+            updateLineNumbers();
+            applyEditorToPreview();
+            saveToWorkspace();
+        }
+    }
+
+    async function saveToWorkspace() {
+        const mainWs = document.getElementById('workspace-select');
+        const artWs = document.getElementById('artifact-workspace-select');
+        const wsName = (mainWs && mainWs.value) ? mainWs.value : (artWs ? artWs.value : '');
+        
+        if(!wsName) {
+            alert("⚠️ Por favor, selecciona un Workspace en el menú desplegable antes de guardar.");
+            return;
+        }
+        
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        const content = editor.value;
+        
+        try {
+            const res = await fetch('/api/workspace/save', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ client_name: wsName.replace('📁 ', '').trim(), html_content: content })
+            });
+            if (res.ok) {
+                alert("🎉 ¡Código guardado con éxito en el Workspace '" + wsName + "'! Ya puedes recargar la página para ver los cambios aplicados.");
+            } else {
+                alert("❌ Error al guardar en el Workspace. Código de estado: " + res.status);
+            }
+        } catch(e){
+            alert("❌ Error de red al intentar guardar: " + e.message);
+        }
+    }
+
+    function openInNewWindow() {
+        if(!currentArtifactCode) return;
+        const win = window.open('', '_blank');
+        win.document.open();
+        win.document.write(currentArtifactCode);
+        win.document.close();
+    }
+
+    document.addEventListener('paste', (e) => {
+        if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+            e.preventDefault();
+            handleFileSelect(e.clipboardData.files);
+        }
+    });
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files) {
+            handleFileSelect(e.dataTransfer.files);
+        }
+    }
+
+    // NUEVA FUNCIÓN DE PROCESAMIENTO DE IMÁGENES (SOLUCIÓN AL ERROR 500)
+    function handleFileSelect(files) {
+        if (!files || files.length === 0) return;
+        let currentImgCount = attachedFiles.filter(f => f.mime_type && f.mime_type.startsWith('image/')).length;
+
+        Array.from(files).forEach(file => {
+            const isImage = file.type && file.type.startsWith('image/');
+            let finalName = file.name || 'archivo_adjunto';
+
+            if (isImage) {
+                currentImgCount++;
+                finalName = `img_${currentImgCount}.jpg`; // Forzamos JPG para evitar Error 500
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // FONDO BLANCO: Esto soluciona el Error 500 de Gemini con PNGs transparentes
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Convertimos a JPEG puro (0.9 de calidad)
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                        const b64 = dataUrl.split(',')[1];
+                        
+                        console.log("✅ Imagen procesada y convertida a JPG:", finalName);
+                        
+                        attachedFiles.push({ 
+                            name: finalName, 
+                            mime_type: 'image/jpeg', 
+                            data: b64, 
+                            size: file.size 
+                        });
+                        renderAttachmentsBar();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const b64 = e.target.result.split(',')[1];
+                    console.log("✅ Archivo procesado:", finalName);
+                    
+                    attachedFiles.push({ 
+                        name: finalName, 
+                        mime_type: file.type || 'application/octet-stream', 
+                        data: b64, 
+                        size: file.size 
+                    });
+                    renderAttachmentsBar();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.value = '';
+    }
+
+    function previewAttachment(idx) {
+        const f = attachedFiles[idx];
+        if (f && f.mime_type && f.mime_type.startsWith('image/')) {
+            const w = window.open('');
+            w.document.write(`<body style="margin:0;background:#050505;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="data:${f.mime_type};base64,${f.data}" style="max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,0.5);"></body>`);
+        }
+    }
+
+    function removeAttachment(idx) {
+        attachedFiles.splice(idx, 1);
+        renderAttachmentsBar();
+    }
+
+    function renderAttachmentsBar() {
+        const bar = document.getElementById('attachments-bar');
+        if (!bar) return;
+        if (attachedFiles.length === 0) {
+            bar.classList.add('hidden');
+            bar.innerHTML = '';
+            return;
+        }
+        bar.classList.remove('hidden');
+        bar.innerHTML = '';
+        attachedFiles.forEach((f, idx) => {
+            const pill = document.createElement('div');
+            pill.className = 'flex items-center space-x-2 px-3 py-1 rounded-full bg-[#181822] border border-[#282836] text-xs font-mono text-neutral-300 shadow';
+            const isImg = f.mime_type && f.mime_type.startsWith('image/');
+            pill.innerHTML = `
+                <span class="cursor-pointer" onclick="previewAttachment(${idx})" title="Ver vista previa">${isImg ? '🖼️' : '📎'}</span>
+                <span class="font-bold text-[#C4A77D] cursor-pointer hover:underline" onclick="previewAttachment(${idx})">${escapeHtml(f.name)}</span>
+                <button onclick="removeAttachment(${idx})" class="text-rose-400 hover:text-rose-300 ml-1 font-bold" title="Eliminar">✕</button>
+            `;
+            bar.appendChild(pill);
+        });
+    }
+
+    async function loadWorkspaceFiles(wsName) {
+        if (!wsName) return;
+        let cleanName = wsName.replace(/[^a-zA-Z0-9_-]/g, '').trim();
+        if (!cleanName) return;
+        
+        const mainSel = document.getElementById('workspace-select');
+        const artSel = document.getElementById('artifact-workspace-select');
+        if (mainSel && mainSel.value !== wsName) mainSel.value = wsName;
+        if (artSel && artSel.value !== wsName) artSel.value = wsName;
+
+        try {
+            const res = await fetch('/workspaces/' + cleanName + '/index.html?t=' + Date.now());
+            if (res.ok) {
+                const content = await res.text();
+                openArtifact('html', content);
+            }
+        } catch(e) {}
+    }
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const wsSel = document.getElementById('workspace-select');
+            if (wsSel && wsSel.value) {
+                loadWorkspaceFiles(wsSel.value);
+            }
+        }, 300);
+        
+        initTokenCounter();
+    });
+
+    function initTokenCounter() {
+        const chatContainer = document.getElementById('chat-messages-container');
+        const tokenDisplay = document.getElementById('sidebar-tokens-val');
+        if (!chatContainer || !tokenDisplay) return;
+
+        const observer = new MutationObserver(() => {
+            const text = chatContainer.innerText || '';
+            const tokens = Math.ceil(text.length / 4); 
+            tokenDisplay.textContent = tokens.toLocaleString();
+        });
+
+        observer.observe(chatContainer, { childList: true, subtree: true, characterData: true });
+    }
+
+    async function loadSpecificFile(filename) {
+        const wsSel = document.getElementById('artifact-workspace-select');
+        if (!wsSel || !wsSel.value) return;
+        let cleanName = wsSel.value.replace(/[^a-zA-Z0-9_-]/g, '').trim();
+        
+        try {
+            const res = await fetch('/workspaces/' + cleanName + '/' + filename + '?t=' + Date.now());
+            if (res.ok) {
+                const content = await res.text();
+                const ext = filename.split('.').pop();
+                openArtifact(ext, content);
+            }
+        } catch(e) {
+            console.error("Error cargando archivo:", e);
+        }
+    }
+
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    function saveApiKeys() {
+        const geminiKey = document.getElementById('api-key-gemini').value;
+        if(geminiKey) localStorage.setItem('kiala_gemini_key', geminiKey);
+        
+        toggleModal('modal-vault');
+        alert("🔒 Claves guardadas en la bóveda local exitosamente.");
+    }
+
+    function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  </script>
+</body>
+</html>

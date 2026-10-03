@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Chats Recuperados - Kiala Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #09090d;
+      color: #e2e2e6;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .brand-gold {
+      background: linear-gradient(135deg, #E6DAC8 0%, #C4A77D 50%, #8F7449 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d0d12;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #22222e;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #c4a77d;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- HEADER -->
+  <header class="h-16 border-b border-[#1A1A22] bg-[#0E0E13] px-6 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="font-bold text-lg tracking-wider brand-gold">KIALA RECOVERY</span>
+      <span class="text-xs font-mono text-neutral-500 uppercase tracking-widest">Visor de Historial</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span class="text-xs text-neutral-400 font-mono" id="status-indicator">🔴 Sin archivo cargado</span>
+      <button onclick="location.reload()" class="text-xs bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] px-3 py-1.5 rounded-lg transition text-neutral-300">
+        Reiniciar Visor
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div class="flex-1 flex overflow-hidden relative">
+    
+    <!-- PANTALLA DE CARGA INICIAL (OVERLAY) -->
+    <div id="upload-overlay" class="absolute inset-0 bg-[#09090d] z-50 flex flex-col items-center justify-center p-6">
+      <div class="max-w-md w-full bg-[#111116] border border-[#1e1e2a] rounded-3xl p-8 shadow-2xl text-center space-y-6">
+        <div class="w-16 h-16 bg-[#c4a77d]/10 border border-[#c4a77d]/20 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+          📂
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold text-neutral-100">Cargar Copia de Seguridad</h2>
+          <p class="text-sm text-neutral-400 mt-2">
+            Selecciona el archivo <code class="text-[#c4a77d] bg-[#1a1a24] px-1.5 py-0.5 rounded font-mono">backup_chats.json</code> para restaurar y buscar tus conversaciones.
+          </p>
+        </div>
+
+        <!-- DRAG AND DROP AREA -->
+        <div id="drop-zone" class="border-2 border-dashed border-[#2a2a3a] hover:border-[#c4a77d]/50 rounded-2xl p-8 transition cursor-pointer bg-[#0d0d12]"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="event.preventDefault(); this.classList.add('border-[#c4a77d]')"
+             ondragleave="this.classList.remove('border-[#c4a77d]')"
+             ondrop="handleFileDrop(event)">
+          <input type="file" id="file-input" class="hidden" accept=".json" onchange="handleFileSelect(event)">
+          <p class="text-xs text-neutral-400">Arrastra el archivo JSON aquí o haz clic para buscarlo</p>
+          <span class="inline-block mt-3 bg-gradient-to-r from-[#C4A77D] to-[#8F7449] text-[#0A0A0D] font-bold text-xs px-4 py-2 rounded-xl shadow-md">
+            Seleccionar Archivo
+          </span>
+        </div>
+
+        <!-- CONSOLA DE ERRORES INTEGRADA -->
+        <div id="error-console" class="hidden text-left bg-rose-950/30 border border-rose-900/50 rounded-xl p-4 text-xs text-rose-300 font-mono space-y-1 overflow-y-auto max-h-40">
+          <div class="font-bold text-rose-400">❌ ERROR DE CARGA:</div>
+          <div id="error-message"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR (LISTA DE CHATS) -->
+    <aside class="w-80 border-r border-[#1A1A22] bg-[#0C0C10] flex flex-col shrink-0 overflow-hidden">
+      <!-- BUSCADOR -->
+      <div class="p-4 border-b border-[#15151C]">
+        <div class="relative">
+          <input id="search-input" oninput="filterSessions()" type="text" placeholder="Buscar en chats..." class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl pl-4 pr-4 py-2.5 text-sm text-neutral-200 outline-none focus:border-[#c4a77d]/50 transition placeholder-neutral-600 shadow-inner">
+        </div>
+      </div>
+
+      <!-- LISTA -->
+      <div id="sessions-list" class="flex-1 overflow-y-auto p-3 space-y-1.5">
+        <div class="text-center text-xs text-neutral-500 py-8">Carga un archivo para ver las sesiones</div>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO DEL CHAT SELECCIONADO -->
+    <main class="flex-1 flex flex-col bg-[#09090d] overflow-hidden">
+      <!-- CABECERA DEL CHAT -->
+      <div class="h-14 border-b border-[#1A1A22] bg-[#0E0E13] px-6 flex items-center justify-between shrink-0">
+        <h3 id="active-chat-title" class="font-medium text-sm text-neutral-200 truncate">Selecciona una conversación</h3>
+        <span id="message-count" class="text-xs font-mono text-neutral-500">0 mensajes</span>
+      </div>
+
+      <!-- MENSAJES -->
+      <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div class="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-500">
+          <span class="text-4xl mb-3">💬</span>
+          <p class="text-sm">Selecciona un chat de la barra lateral para ver su contenido.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let loadedData = null;
+    let sessions = [];
+    let activeSessionId = null;
+
+    // Capturar errores globales de JS y mostrarlos en pantalla
+    window.onerror = function(message, source, lineno, colno, error) {
+      showError(`Error de script: ${message} en línea ${lineno}:${colno}`);
+      return false;
+    };
+
+    function showError(msg) {
+      const consoleEl = document.getElementById('error-console');
+      const msgEl = document.getElementById('error-message');
+      if (consoleEl && msgEl) {
+        consoleEl.classList.remove('hidden');
+        msgEl.textContent = msg;
+      }
+    }
+
+    function handleFileDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('border-[#c4a77d]');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFile(e.dataTransfer.files[0]);
+      }
+    }
+
+    function handleFileSelect(e) {
+      if (e.target.files && e.target.files.length > 0) {
+        processFile(e.target.files[0]);
+      }
+    }
+
+    function processFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const text = event.target.result;
+          const json = JSON.parse(text);
+          parseBackupJSON(json);
+        } catch (err) {
+          showError(`El archivo no es un JSON válido. Detalle: ${err.message}`);
+        }
+      };
+      reader.onerror = function() {
+        showError("No se pudo leer el archivo físico.");
+      };
+      reader.readAsText(file);
+    }
+
+    function parseBackupJSON(json) {
+      try {
+        // Detectar estructura del JSON
+        if (Array.isArray(json)) {
+          // Es un array directo de sesiones o mensajes
+          if (json.length > 0 && json[0].messages) {
+            sessions = json;
+          } else {
+            // Es un array plano de mensajes, los agrupamos en una sesión ficticia
+            sessions = [{
+              id: 'session_flat',
+              title: 'Conversación Recuperada',
+              messages: json
+            }];
+          }
+        } else if (json.sessions && Array.isArray(json.sessions)) {
+          // Estructura estándar { sessions: [...], messages: [...] } o similar
+          sessions = json.sessions;
+          // Si los mensajes están separados, los asociamos
+          if (json.messages && Array.isArray(json.messages)) {
+            sessions.forEach(s => {
+              if (!s.messages || s.messages.length === 0) {
+                s.messages = json.messages.filter(m => m.session_id === s.id);
+              }
+            });
+          }
+        } else if (json.chats && Array.isArray(json.chats)) {
+          sessions = json.chats;
+        } else {
+          // Intentar buscar cualquier array dentro del objeto
+          let foundArray = null;
+          for (let key in json) {
+            if (Array.isArray(json[key])) {
+              foundArray = json[key];
+              break;
+            }
+          }
+          if (foundArray) {
+            sessions = foundArray;
+          } else {
+            throw new Error("No se encontró una estructura de chats o mensajes compatible en el JSON.");
+          }
+        }
+
+        // Validar que tengamos sesiones
+        if (!sessions || sessions.length === 0) {
+          throw new Error("El archivo JSON está vacío o no contiene sesiones válidas.");
+        }
+
+        // Ocultar overlay de carga
+        document.getElementById('upload-overlay').classList.add('hidden');
+        document.getElementById('status-indicator').textContent = `🟢 Cargado (${sessions.length} chats)`;
+        document.getElementById('status-indicator').className = "text-xs text-emerald-400 font-mono";
+
+        renderSessionsList();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function renderSessionsList(filterText = '') {
+      const container = document.getElementById('sessions-list');
+      container.innerHTML = '';
+
+      const filtered = sessions.filter(s => {
+        const titleMatch = (s.title || s.name || 'Sin título').toLowerCase().includes(filterText.toLowerCase());
+        // Buscar también dentro de los mensajes de esta sesión
+        let messageMatch = false;
+        if (s.messages && Array.isArray(s.messages)) {
+          messageMatch = s.messages.some(m => (m.content || m.text || '').toLowerCase().includes(filterText.toLowerCase()));
+        }
+        return titleMatch || messageMatch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center text-xs text-neutral-500 py-8">No se encontraron resultados</div>';
+        return;
+      }
+
+      filtered.forEach(s => {
+        const id = s.id || s.session_id;
+        const title = s.title || s.name || 'Conversación sin título';
+        const msgCount = s.messages ? s.messages.length : 0;
+        
+        const item = document.createElement('div');
+        const isActive = id === activeSessionId;
+        item.className = `p-3 rounded-xl text-sm cursor-pointer transition ${isActive ? 'bg-[#181824] text-[#c4a77d] border border-[#c4a77d]/30 font-medium' : 'text-neutral-400 hover:bg-[#14141B] hover:text-neutral-200'}`;
+        item.onclick = () => selectSession(id);
+        
+        item.innerHTML = `
+          <div class="font-medium truncate">${escapeHtml(title)}</div>
+          <div class="text-xs text-neutral-500 mt-1 flex justify-between">
+            <span>ID: ${id}</span>
+            <span>${msgCount} mensajes</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function filterSessions() {
+      const query = document.getElementById('search-input').value;
+      renderSessionsList(query);
+    }
+
+    function selectSession(id) {
+      activeSessionId = id;
+      
+      // Actualizar estado activo en la lista lateral
+      const query = document.getElementById('search-input').value;
+      renderSessionsList(query);
+
+      const session = sessions.find(s => (s.id || s.session_id) === id);
+      if (!session) return;
+
+      document.getElementById('active-chat-title').textContent = session.title || session.name || 'Conversación';
+      const msgs = session.messages || [];
+      document.getElementById('message-count').textContent = `${msgs.length} mensajes`;
+
+      const container = document.getElementById('messages-container');
+      container.innerHTML = '';
+
+      if (msgs.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-500">
+            <span class="text-2xl mb-2">📭</span>
+            <p class="text-sm">Esta conversación no tiene mensajes registrados.</p>
+          </div>
+        `;
+        return;
+      }
+
+      msgs.forEach(m => {
+        const role = m.role || (m.is_user ? 'user' : 'model');
+        const isUser = role === 'user';
+        const content = m.content || m.text || '';
+
+        const row = document.createElement('div');
+        row.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1 w-full`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-3xl rounded-2xl p-4 text-sm leading-relaxed ${isUser ? 'bg-[#181822] border border-[#2A2A38] text-neutral-100 rounded-br-none' : 'bg-[#111116] border border-[#1e1e2a] text-neutral-200 rounded-bl-none'}`;
+        
+        // Renderizar Markdown
+        bubble.innerHTML = marked.parse(content);
+        
+        // Formatear bloques de código
+        bubble.querySelectorAll('pre').forEach(pre => {
+          pre.className = "my-3 p-3 rounded-xl bg-[#07070a] border border-[#1a1a24] text-xs font-mono overflow-x-auto text-emerald-400";
+        });
+
+        const meta = document.createElement('span');
+        meta.className = 'text-[10px] text-neutral-500 px-1';
+        meta.textContent = isUser ? 'Tú' : 'Kiala AI';
+
+        row.appendChild(bubble);
+        row.appendChild(meta);
+        container.appendChild(row);
+      });
+
+      container.scrollTop = 0;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>

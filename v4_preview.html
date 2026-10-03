@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiala's AI Studio Pro - V4 Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root { font-size: 16px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #050505;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+      color: #E2E2E6;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .brand-kiala {
+      background: linear-gradient(135deg, #E6DAC8 0%, #C4A77D 50%, #8F7449 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* SCROLLBARS MINIMALISTAS INYECTADAS */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(196, 167, 125, 0.5); }
+
+    /* MODALES GLASSMORPHISM */
+    .kiala-modal {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+    }
+    .kiala-modal.active { display: flex; opacity: 1; }
+    .kiala-modal-content {
+      background: #101015; border: 1px solid #22222E; border-radius: 1.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); width: 100%; max-width: 28rem;
+      transform: scale(0.95); transition: transform 0.3s ease; overflow: hidden;
+    }
+    .kiala-modal.active .kiala-modal-content { transform: scale(1); }
+
+    .gemini-composer-wrapper {
+      position: relative;
+      background: #111116;
+      border-radius: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .gemini-composer-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -2.5px;
+      border-radius: 1.65rem;
+      padding: 2.5px;
+      background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570, #F4B400, #4285F4);
+      background-size: 200% 200%;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.15;
+      filter: blur(2px);
+      transition: opacity 0.5s ease, filter 0.5s ease;
+      animation: geminiFlow 15s linear infinite;
+      pointer-events: none;
+    }
+    .gemini-composer-wrapper:focus-within::before {
+      opacity: 0.4;
+      filter: blur(4px);
+      animation: geminiFlow 8s linear infinite;
+    }
+    .gemini-composer-wrapper.is-thinking::before {
+      opacity: 1;
+      filter: blur(8px);
+      background-size: 300% 300%;
+      animation: geminiFlow 1.5s linear infinite, pulseGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes geminiFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+    @keyframes pulseGlow { 0% { opacity: 0.7; filter: blur(6px); } 100% { opacity: 1; filter: blur(10px); } }
+
+    .hero-active #chat-stream-box { display: none; }
+    .hero-active #hero-greeting-center { display: flex; }
+    .hero-active #composer-outer-container { margin-top: 2.5rem; margin-bottom: auto; }
+
+    .max-w-3xl, .max-w-4xl { max-width: 64rem !important; }
+    
+    #modo-estudio-panel { 
+      flex: none !important; 
+      margin: 1rem 1rem 1rem 0;
+      border-radius: 1.5rem;
+      height: calc(100vh - 2rem);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      border: 1px solid #22222E;
+    }
+    
+    pre { max-height: 500px !important; overflow-y: auto !important; border-radius: 0.5rem !important; }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none text-neutral-300">
+
+  <!-- HEADER -->
+  <header class="h-16 border-b border-[#1A1A22] bg-[#0E0E13]/80 backdrop-blur-md px-5 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center space-x-4">
+      <button id="btn-k-toggle" onclick="toggleSidebar()" class="group flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[#16161D] transition" title="Alternar barra lateral">
+        <img src="/static/logo.png" class="h-14 w-14 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" alt="K" onerror="this.style.display='none'">
+      </button>
+      <div class="flex items-baseline space-x-2 text-left">
+        <span class="font-bold text-xl tracking-wider brand-kiala">KIALA'S</span>
+        <span class="font-light text-sm tracking-widest text-neutral-400">AI STUDIO</span>
+      </div>
+      <div class="h-6 w-px bg-[#1F1F28] mx-2"></div>
+      <div id="breadcrumb-capsule" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-[#14141A]/80 border border-[#22222E] backdrop-blur-md text-sm text-neutral-300 shadow-inner">
+        <span id="header-session-title" class="truncate max-w-xs text-[#C4A77D] font-medium">Conversación</span>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <!-- NUEVOS BOTONES INYECTADOS -->
+      <button onclick="toggleModal('modal-vault')" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-emerald-400 transition shadow-sm" title="Bóveda Kiala">
+        <i data-lucide="shield-alert" class="w-5 h-5" id="vault-icon"></i>
+      </button>
+      <button onclick="toggleModal('modal-extensions')" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-blue-400 transition shadow-sm" title="Extensiones">
+        <i data-lucide="blocks" class="w-5 h-5"></i>
+      </button>
+      <button onclick="toggleMultimediaStudio()" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-purple-400 transition shadow-sm" title="Estudio Multimedia">
+        <i data-lucide="image" class="w-5 h-5"></i>
+      </button>
+
+      <div class="h-6 w-px bg-[#1F1F28] mx-1"></div>
+
+      <!-- BOTONES ORIGINALES -->
+      <button onclick="openPromptLab()" class="flex items-center space-x-2 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition shadow-sm font-medium">
+        <i data-lucide="flask-conical" class="w-4 h-4"></i><span>Lab Prompts</span>
+      </button>
+      <button onclick="exportChatMarkdown()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
+        <i data-lucide="download" class="w-4 h-4 text-neutral-400"></i><span>Exportar</span>
+      </button>
+      <button onclick="toggleSettingsModal()" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-[#C4A77D] transition shadow-sm">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY CONTENT -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- SIDEBAR -->
+    <aside id="left-panel" class="w-72 border-r border-[#1A1A22] bg-[#0C0C10] flex flex-col shrink-0 overflow-hidden transition-all duration-300">
+      <div id="view-project-detail" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-[#181820] bg-[#101015]">
+          <div class="flex items-center justify-between gap-2">
+            <button id="btn-new-chat" class="flex-1 text-sm bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold px-3 py-2 rounded-lg transition shadow-md flex items-center justify-center gap-1">
+              <i data-lucide="message-square-plus" class="w-4 h-4"></i> Nuevo
+            </button>
+            <button class="flex-1 text-sm bg-[#1A1A22] hover:bg-[#22222E] border border-[#2A2A38] text-neutral-300 font-medium px-3 py-2 rounded-lg transition shadow-md flex items-center justify-center gap-1" title="Chat Temporal (No se guarda)">
+              <i data-lucide="ghost" class="w-4 h-4"></i> Temp
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-3 border-b border-[#15151C]">
+          <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-500"></i>
+            <input id="search-projects-input" type="text" placeholder="Buscar chat..." class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl pl-9 pr-3 py-2 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 focus:ring-1 focus:ring-[#C4A77D]/30 transition placeholder-neutral-600 shadow-inner">
+          </div>
+        </div>
+
+        <div id="project-chats-container" class="flex-1 overflow-y-auto p-3 space-y-1.5">
+            <!-- Chats de prueba -->
+            <div class="group flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition bg-[#181824] text-[#C4A77D] border border-[#C4A77D]/30 font-medium">
+                <span class="truncate flex-1 pr-2">Chat de Prueba V4</span>
+            </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT CANVAS -->
+    <main id="main-content-canvas" class="flex-1 min-w-0 flex flex-col relative hero-active">
+      <div id="hero-greeting-center" class="hidden flex-1 flex-col items-center justify-center p-6 text-center select-none">
+        <img src="/static/logo.png" class="w-80 h-80 object-contain mb-2 filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" onerror="this.style.display='none'">
+        <h1 class="text-4xl font-medium text-neutral-200 tracking-tight mb-3">¡Es tu turno!</h1>
+        <p class="text-base text-neutral-500 max-w-md">Kiala's AI Studio está listo. Explora tus proyectos o formula cualquier consulta.</p>
+      </div>
+
+      <div id="chat-stream-box" class="flex-1 overflow-y-auto p-6 select-text">
+        <div id="chat-messages-container" class="max-w-4xl mx-auto space-y-6">
+            <!-- Mensaje de prueba -->
+            <div class="flex flex-col items-start space-y-2 w-full">
+                <div class="max-w-3xl rounded-3xl p-5 text-base leading-relaxed bg-transparent text-neutral-200 prose prose-invert max-w-none w-full">
+                    <p>¡Hola Jefe! Estás visualizando la versión <strong>V4 Preview</strong> directamente en el entorno de pruebas.</p>
+                    <p>Prueba hacer scroll para ver las nuevas barras minimalistas, y haz clic en los iconos de la barra superior (Escudo, Bloques, Imagen) para ver los nuevos modales.</p>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div id="composer-outer-container" class="p-4 transition-all duration-300">
+        <div class="max-w-4xl mx-auto flex flex-col space-y-2">
+          <div id="composer-box" class="gemini-composer-wrapper flex flex-col p-4 shadow-2xl">
+            <div class="flex items-center space-x-3">
+              <button class="p-2.5 text-neutral-400 hover:text-white rounded-xl hover:bg-[#1A1A22] transition shrink-0" title="Adjuntar archivos">
+                <i data-lucide="paperclip" class="w-5 h-5"></i>
+              </button>
+              <textarea id="prompt-input" rows="1" class="w-full bg-transparent resize-none outline-none text-base leading-relaxed text-neutral-100 placeholder-neutral-500 select-text max-h-48" placeholder="Pregúntale a Gemini 3... (arrastra PDFs o código)"></textarea>
+              <button id="send-btn" class="bg-[#1C1C26] hover:bg-[#262634] border border-[#2E2E3E] text-neutral-200 hover:text-white p-3 rounded-xl transition shadow flex items-center justify-center shrink-0">
+                <i data-lucide="send" class="w-5 h-5 text-[#C4A77D]"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALES INYECTADOS -->
+  <!-- Modal Bóveda -->
+  <div id="modal-vault" class="kiala-modal">
+    <div class="kiala-modal-content p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-[#C4A77D] flex items-center gap-2"><i data-lucide="shield" class="w-6 h-6"></i> Bóveda Kiala</h3>
+        <button onclick="toggleModal('modal-vault')" class="text-neutral-500 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-4">
+        <p class="text-sm text-neutral-400">Tu información confidencial cifrada con AES-256 localmente.</p>
+        <input type="password" placeholder="Contraseña Maestra" class="w-full bg-[#0A0A0D] border border-[#22222E] rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#C4A77D]">
+        <button class="w-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30 py-3 rounded-xl font-medium transition flex justify-center items-center gap-2">
+          <i data-lucide="unlock" class="w-4 h-4"></i> Desbloquear Bóveda
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Extensiones -->
+  <div id="modal-extensions" class="kiala-modal">
+    <div class="kiala-modal-content p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-blue-400 flex items-center gap-2"><i data-lucide="blocks" class="w-6 h-6"></i> Integraciones</h3>
+        <button onclick="toggleModal('modal-extensions')" class="text-neutral-500 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-3">
+        <button class="w-full bg-[#14141A] border border-[#22222E] hover:border-blue-500/50 p-4 rounded-xl flex items-center justify-between transition group">
+          <div class="flex items-center gap-3"><i data-lucide="hard-drive" class="w-5 h-5 text-blue-400"></i><span class="text-sm font-medium text-neutral-200">Google Drive</span></div>
+          <span class="text-xs text-neutral-500 group-hover:text-blue-400">Conectar</span>
+        </button>
+        <button class="w-full bg-[#14141A] border border-[#22222E] hover:border-red-500/50 p-4 rounded-xl flex items-center justify-between transition group">
+          <div class="flex items-center gap-3"><i data-lucide="mail" class="w-5 h-5 text-red-400"></i><span class="text-sm font-medium text-neutral-200">Gmail</span></div>
+          <span class="text-xs text-neutral-500 group-hover:text-red-400">Conectar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Lógica de Modales
+    function toggleModal(id) {
+      const modal = document.getElementById(id);
+      if(!modal) return;
+      if(modal.classList.contains('active')) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 300);
+      } else {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+      }
+    }
+
+    function toggleMultimediaStudio() {
+      alert("El Estudio Multimedia se abrirá en el panel derecho (Modo Estudio) para procesar imágenes con Vertex AI. (Esta es una previsualización)");
+    }
+  </script>
+</body>
+</html>

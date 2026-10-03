@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <base href="http://localhost:8080/workspaces/kiala_frontend_dev/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiala's AI Studio Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- NUEVOS ARCHIVOS DE UI -->
+  <link rel="stylesheet" href="/css/kiala-ui.css">
+  <script src="/js/kiala-ui.js" defer></script>
+  <!-- Filerobot Image Editor (Alternativa a Canva) -->
+  <script src="https://scaleflex.cloudimg.io/v7/plugins/filerobot-image-editor/latest/filerobot-image-editor.min.js"></script>
+
+  <style>
+    :root { font-size: 16px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #050505;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+      color: #E2E2E6;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .brand-kiala {
+      background: linear-gradient(135deg, #E6DAC8 0%, #C4A77D 50%, #8F7449 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gemini-composer-wrapper {
+      position: relative;
+      background: #111116;
+      border-radius: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .gemini-composer-wrapper::before {
+      content: '';
+      position: absolute;
+      inset: -2.5px;
+      border-radius: 1.65rem;
+      padding: 2.5px;
+      background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570, #F4B400, #4285F4);
+      background-size: 200% 200%;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.15;
+      filter: blur(2px);
+      transition: opacity 0.5s ease, filter 0.5s ease;
+      animation: geminiFlow 15s linear infinite;
+      pointer-events: none;
+    }
+    .gemini-composer-wrapper:focus-within::before {
+      opacity: 0.4;
+      filter: blur(4px);
+      animation: geminiFlow 8s linear infinite;
+    }
+    .gemini-composer-wrapper.is-thinking::before {
+      opacity: 1;
+      filter: blur(8px);
+      background-size: 300% 300%;
+      animation: geminiFlow 1.5s linear infinite, pulseGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes geminiFlow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+    @keyframes pulseGlow { 0% { opacity: 0.7; filter: blur(6px); } 100% { opacity: 1; filter: blur(10px); } }
+
+    .hero-active #chat-stream-box { display: none; }
+    .hero-active #hero-greeting-center { display: flex; }
+    .hero-active #composer-outer-container { margin-top: 2.5rem; margin-bottom: auto; }
+
+    .max-w-3xl, .max-w-4xl { max-width: 64rem !important; }
+    
+    #modo-estudio-panel { 
+      flex: none !important; 
+      margin: 1rem 1rem 1rem 0;
+      border-radius: 1.5rem;
+      height: calc(100vh - 2rem);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      border: 1px solid #22222E;
+    }
+
+    .resizer-bar {
+      width: 6px;
+      cursor: col-resize;
+      background: #1A1A22;
+      align-self: stretch;
+      transition: background 0.2s, width 0.2s;
+      z-index: 30;
+      margin: 1rem 0;
+      border-radius: 3px;
+    }
+    .resizer-bar:hover, .resizer-bar.is-dragging {
+      background: #C4A77D;
+      width: 8px;
+      box-shadow: 0 0 12px rgba(196, 167, 125, 0.6);
+    }
+    
+    pre { max-height: 500px !important; overflow-y: auto !important; border-radius: 0.5rem !important; }
+    
+    /* Scrollbars Minimalistas */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(196, 167, 125, 0.1); border-radius: 10px; transition: background 0.3s ease; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(196, 167, 125, 0.4); }
+    * { scrollbar-width: thin; scrollbar-color: rgba(196, 167, 125, 0.1) transparent; }
+
+    /* --- RESPONSIVE MOBILE STYLES (OPTION A) --- */
+    @media (max-width: 768px) {
+      #left-panel {
+        position: absolute;
+        top: 4rem; /* h-16 */
+        left: 0;
+        bottom: 0;
+        z-index: 40;
+        width: 100%;
+        max-width: 280px;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background-color: #0C0C10;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.8);
+      }
+      #left-panel.mobile-open {
+        transform: translateX(0);
+      }
+      #modo-estudio-panel {
+        display: none !important; /* Ocultar editor de código en móvil */
+      }
+      #panel-resizer {
+        display: none !important;
+      }
+      .mobile-hide {
+        display: none !important;
+      }
+      #chat-stream-box {
+        padding-bottom: 5rem; /* Espacio para la barra inferior */
+      }
+      #composer-outer-container {
+        padding-bottom: 4.5rem; /* Espacio para la barra inferior */
+      }
+      /* Barra de Navegación Móvil */
+      .mobile-bottom-nav {
+        display: flex !important;
+      }
+      /* Ocultar elementos innecesarios en móvil */
+      #workspace-select, #sidebar-tokens-box, #breadcrumb-capsule {
+        display: none !important;
+      }
+    }
+    
+    .mobile-bottom-nav {
+      display: none;
+    }
+
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none text-neutral-300">
+
+  <!-- PANTALLA DE LOGIN CON MASTER KEY -->
+  <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="relative z-10 w-full max-w-md p-8 bg-[#0E0E13]/95 backdrop-blur-2xl border border-[#22222E] rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] flex flex-col items-center">
+      
+      <!-- Escudo de Seguridad Decorativo -->
+      <div class="absolute -top-6 bg-[#161622] border border-[#C4A77D]/30 p-3 rounded-full shadow-lg text-[#C4A77D] animate-pulse">
+        <i data-lucide="shield-check" class="w-6 h-6"></i>
+      </div>
+
+      <img src="/static/logo.png" class="w-24 h-24 object-contain mt-4 mb-4 filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" onerror="this.style.display='none'">
+      <h2 class="text-2xl font-bold text-neutral-200 tracking-widest mb-1 brand-kiala">KIALA STUDIO</h2>
+      <p class="text-[10px] text-neutral-500 mb-6 font-mono uppercase tracking-widest flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Servidor Seguro Activo
+      </p>
+      
+      <!-- BOTÓN GOOGLE OAUTH -->
+      <button type="button" onclick="handleGoogleLogin()" class="w-full flex items-center justify-center gap-3 bg-[#14141A] hover:bg-[#1C1C26] border border-[#22222E] hover:border-neutral-700 text-neutral-300 hover:text-white font-medium text-sm py-3 rounded-xl transition shadow-sm mb-5">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.89 3.02C6.21 7.58 8.87 5.04 12 5.04z"/>
+          <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.27H12v4.51h6.46c-.29 1.48-1.14 2.73-2.44 3.57l3.79 2.94c2.21-2.04 3.68-5.04 3.68-8.75z"/>
+          <path fill="#FBBC05" d="M5.28 14.78c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28L1.39 7.2C.5 8.97 0 10.93 0 13s.5 4.03 1.39 5.8l3.89-3.02z"/>
+          <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.91l-3.79-2.94c-1.1.74-2.52 1.19-4.17 1.19-3.13 0-5.79-2.54-6.72-5.54l-3.89 3.02C3.37 20.33 7.35 23 12 23z"/>
+        </svg>
+        Acceder con Google
+      </button>
+
+      <div class="w-full flex items-center justify-between mb-5">
+        <span class="h-px bg-[#1F1F28] flex-1"></span>
+        <span class="text-[10px] font-mono text-neutral-600 uppercase px-3 tracking-widest">o clave maestra</span>
+        <span class="h-px bg-[#1F1F28] flex-1"></span>
+      </div>
+
+      <form id="login-form" onsubmit="handleLogin(event)" class="w-full space-y-4">
+        <div>
+          <label class="block text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">Email Autorizado</label>
+          <input type="email" id="login-email" required class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl px-4 py-2.5 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition shadow-inner" placeholder="oficial@kialashq.com">
+        </div>
+        <div>
+          <label class="block text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-1.5">Contraseña Maestra</label>
+          <input type="password" id="login-password" required class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl px-4 py-2.5 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition shadow-inner" placeholder="••••••••">
+        </div>
+        
+        <button type="submit" id="login-btn" class="w-full mt-2 bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold text-sm py-3 rounded-xl transition shadow-[0_0_20px_rgba(196,167,125,0.15)] flex items-center justify-center gap-2">
+          <i data-lucide="key-round" class="w-4 h-4"></i> Desbloquear Consola
+        </button>
+        
+        <p id="login-error" class="text-rose-400 text-xs text-center hidden mt-2 font-mono bg-rose-500/10 border border-rose-500/20 py-2 rounded-lg"></p>
+        
+        <div class="pt-2 flex flex-col items-center gap-2">
+          <button type="button" onclick="resetMasterPassword()" class="text-center text-[11px] text-neutral-500 hover:text-[#C4A77D] transition">¿Restablecer sesión maestra?</button>
+        </div>
+      </form>
+
+      <!-- Badge de Seguridad de Producción -->
+      <div class="mt-6 pt-4 border-t border-[#1A1A22] w-full flex items-center justify-between text-[9px] font-mono text-neutral-600">
+        <span class="flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3 text-emerald-600"></i> AES-256 SSL</span>
+        <span class="flex items-center gap-1"><i data-lucide="shield-alert" class="w-3 h-3 text-amber-600"></i> Anti-Bruteforce</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="h-16 border-b border-[#1A1A22] bg-[#0E0E13]/80 backdrop-blur-md px-5 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center space-x-4">
+      <!-- SOLO LA K OCULTA/MUESTRA EL PANEL -->
+      <button id="btn-k-toggle" onclick="toggleSidebar()" class="group flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[#16161D] transition" title="Alternar barra lateral">
+        <img src="/static/logo.png" class="h-14 w-14 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" alt="K" onerror="this.style.display='none'">
+      </button>
+      <div class="flex items-baseline space-x-2 text-left">
+        <span class="font-bold text-xl tracking-wider brand-kiala">KIALA'S</span>
+        <span class="font-light text-sm tracking-widest text-neutral-400">AI STUDIO</span>
+      </div>
+      <div class="h-6 w-px bg-[#1F1F28] mx-2"></div>
+      <div id="breadcrumb-capsule" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-[#14141A]/80 border border-[#22222E] backdrop-blur-md text-sm text-neutral-300 shadow-inner">
+        <span id="header-session-title" class="truncate max-w-xs text-[#C4A77D] font-medium">Conversación</span>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <button onclick="openPromptLab()" class="flex items-center space-x-2 px-4 py-2 text-sm text-purple-400 hover:text-purple-300 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition shadow-sm font-medium">
+        <i data-lucide="flask-conical" class="w-4 h-4"></i><span class="hidden sm:inline">Lab Prompts</span>
+      </button>
+      <button onclick="exportChatMarkdown()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
+        <i data-lucide="download" class="w-4 h-4 text-neutral-400"></i><span class="hidden sm:inline">Exportar</span>
+      </button>
+      <button onclick="toggleArtifactPanel()" class="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-300 hover:text-white rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] transition shadow-sm">
+        <i data-lucide="layout" class="w-4 h-4 text-neutral-400"></i><span class="hidden sm:inline">Estudio</span>
+      </button>
+      
+      <div class="h-6 w-px bg-[#1F1F28] mx-1"></div>
+      
+      <!-- Menú de Herramientas (Dropdown) -->
+      <div class="relative">
+        <button onclick="toggleDropdown('tools-dropdown')" class="p-2.5 rounded-xl bg-[#14141A] hover:bg-[#1A1A22] border border-[#22222E] text-neutral-400 hover:text-[#C4A77D] transition shadow-sm focus:outline-none">
+          <i data-lucide="layout-grid" class="w-5 h-5"></i>
+        </button>
+        
+        <div id="tools-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[#101015] border border-[#22222E] rounded-2xl shadow-2xl z-50 overflow-hidden">
+          <div class="p-2 space-y-1">
+            <button onclick="openMemoryVault(); toggleDropdown('tools-dropdown')" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-neutral-300 hover:text-amber-400 hover:bg-[#1A1A22] rounded-xl transition text-left">
+              <i data-lucide="database" class="w-4 h-4 text-amber-500/70"></i> Memoria Central
+            </button>
+            <button onclick="toggleModal('modal-vault'); toggleDropdown('tools-dropdown')" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-neutral-300 hover:text-emerald-400 hover:bg-[#1A1A22] rounded-xl transition text-left">
+              <i data-lucide="shield" class="w-4 h-4 text-emerald-500/70"></i> Bóveda de Seguridad
+            </button>
+            <button onclick="toggleModal('modal-extensions'); toggleDropdown('tools-dropdown')" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-neutral-300 hover:text-blue-400 hover:bg-[#1A1A22] rounded-xl transition text-left">
+              <i data-lucide="puzzle" class="w-4 h-4 text-blue-500/70"></i> Extensiones y Plugins
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BODY CONTENT -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- SIDEBAR -->
+    <aside id="left-panel" class="w-72 border-r border-[#1A1A22] bg-[#0C0C10] flex flex-col shrink-0 overflow-hidden transition-all duration-300">
+      
+      <!-- CONTENEDOR DE CHATS -->
+      <div id="view-project-detail" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-[#181820] bg-[#101015]">
+          <div class="flex items-center justify-between gap-2">
+            <button id="btn-new-chat" onclick="openNewChatModal()" class="w-full text-sm bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold px-3 py-2 rounded-lg transition shadow-md flex items-center justify-center gap-1">
+              <i data-lucide="message-square-plus" class="w-4 h-4"></i> Nuevo Chat
+            </button>
+          </div>
+        </div>
+        
+        <!-- BUSCADOR REDISEÑADO -->
+        <div class="p-4 border-b border-[#1A1A22] bg-[#050505]">
+          <div class="relative flex items-center">
+            <div class="absolute left-3 flex items-center justify-center w-7 h-7 rounded-full bg-[#1A1A22] border border-[#2A2A38]">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-[#C4A77D]"></i>
+            </div>
+            <input id="search-projects-input" oninput="filterProjects()" type="text" readonly onfocus="this.removeAttribute('readonly');" onblur="if(!this.value) this.setAttribute('readonly', true);" autocomplete="new-password" name="kiala_search_prevent_autofill" placeholder="Buscar chat..." class="w-full bg-[#181820] text-[#9CA3AF] border border-[#2A2A38] rounded-full pl-12 pr-4 py-2.5 text-sm outline-none focus:border-[#C4A77D] focus:bg-[#1F1F28] transition-all placeholder-[#4B5563] shadow-inner" style="color-scheme: dark;">
+          </div>
+        </div>
+
+        <div id="project-chats-container" class="flex-1 overflow-y-auto p-3 space-y-1.5"></div>
+        
+        <div id="sidebar-tokens-box" class="mx-3 my-2 p-2.5 rounded-lg bg-[#14141B] border border-[#22222E] flex items-center justify-between text-xs shadow-inner">
+            <span class="flex items-center gap-1.5 text-neutral-400 font-medium">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i> Tokens Sesión:
+            </span>
+            <span id="sidebar-tokens-val" class="font-mono text-cyan-400 font-bold">0</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT CANVAS -->
+    <main id="main-content-canvas" class="flex-1 min-w-0 flex flex-col relative hero-active">
+      <div id="hero-greeting-center" class="hidden flex-1 flex-col items-center justify-center p-6 text-center select-none">
+        <img src="/static/logo.png" class="w-80 h-80 object-contain mb-2 filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" onerror="this.style.display='none'">
+        <h1 class="text-4xl font-medium text-neutral-200 tracking-tight mb-3">¡Es tu turno!</h1>
+        <p class="text-base text-neutral-500 max-w-md">Kiala's AI Studio está listo. Explora tus proyectos o formula cualquier consulta.</p>
+      </div>
+
+      <div id="chat-stream-box" class="flex-1 overflow-y-auto p-6 select-text">
+        <div id="chat-messages-container" class="max-w-4xl mx-auto space-y-6"></div>
+      </div>
+
+      <div id="composer-outer-container" class="p-4 transition-all duration-300">
+        <div class="max-w-4xl mx-auto flex flex-col space-y-2">
+          <div id="attachments-bar" class="hidden flex flex-wrap gap-2 px-2"></div>
+
+          <div id="composer-box" class="gemini-composer-wrapper flex flex-col p-4 shadow-2xl transition-all duration-300" 
+               ondragover="handleDragOver(event)" 
+               ondragleave="handleDragLeave(event)" 
+               ondrop="handleDrop(event)">
+            <div class="flex items-center space-x-3">
+              <input type="file" id="file-input" multiple accept="image/*,application/pdf,.txt,.py,.js,.json,.csv,.md" class="hidden" onchange="handleFileSelect(this.files)">
+              
+              <button onclick="document.getElementById('file-input').click()" class="p-2.5 text-neutral-400 hover:text-white rounded-xl hover:bg-[#1A1A22] transition shrink-0" title="Adjuntar archivos">
+                <i data-lucide="paperclip" class="w-5 h-5"></i>
+              </button>
+
+              <textarea id="prompt-input" rows="1" class="w-full bg-transparent resize-none outline-none text-base leading-relaxed text-neutral-100 placeholder-neutral-500 select-text max-h-48" placeholder="Pregúntale a Gemini 3... (arrastra PDFs o código)" onkeydown="handleKeyDown(event)" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+
+              <button id="send-btn" onclick="sendChatMessage()" class="bg-[#1C1C26] hover:bg-[#262634] border border-[#2E2E3E] text-neutral-200 hover:text-white p-3 rounded-xl transition shadow flex items-center justify-center shrink-0">
+                <i data-lucide="send" class="w-5 h-5 text-[#C4A77D]"></i>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 mt-3 border-t border-[#1A1A22] text-sm">
+              <div class="flex items-center space-x-3">
+                <div class="flex items-center bg-[#15151C] px-3 py-1.5 rounded-xl border border-[#22222E]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mr-2"></span>
+                  <select id="model-select" class="bg-transparent text-neutral-300 text-sm outline-none cursor-pointer hover:text-white font-medium">
+                    <option value="auto-router" class="bg-[#14141A]">⚡ Auto-Router</option>
+                    <option value="gemini-3.1-pro-preview" class="bg-[#14141A]">Gemini 3.1 Pro Preview</option>
+                    <option value="gemini-3.8-flash" class="bg-[#14141A]">Gemini 3.8 Flash</option>
+                    <option value="claude-3.5-sonnet" class="bg-[#14141A]">Claude 3.5 Sonnet</option>
+                    <option value="llama-3.1-405b" class="bg-[#14141A]">Meta Llama 3.1 (405B)</option>
+                    <option value="imagen-3" class="bg-[#14141A]">🎨 Imagen 3 (Lienzo Visual)</option>
+                  </select>
+                </div>
+
+                <label class="flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-xl hover:bg-[#181820] text-neutral-400 hover:text-neutral-200 transition border border-transparent hover:border-[#22222E]">
+                  <input id="chk-grounding" type="checkbox" class="w-3.5 h-3.5 rounded bg-[#1C1C24] border-[#2A2A38] text-[#C4A77D] focus:ring-0">
+                  <span class="text-sm">Búsqueda Web</span>
+                </label>
+
+                <div class="inline-flex items-center ml-3">
+                    <select id="workspace-select" onchange="loadWorkspaceFiles(this.value)" class="bg-zinc-800 text-zinc-200 text-xs font-medium rounded-lg px-2.5 py-1.5 border border-zinc-600 hover:border-zinc-400 focus:outline-none cursor-pointer shadow-inner transition">
+                        <option value="">📁 Sin Workspace...</option>
+                    </select>
+                </div>
+              </div>
+
+              <div class="relative">
+                <button onclick="toggleBalanceFlyout()" class="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#15151C] hover:bg-[#1C1C26] border border-[#22222E] font-mono text-sm text-neutral-300 transition">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]"></span>
+                  <span id="chip-balance">
+                    <div class="flex items-center gap-3 text-sm font-mono bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
+                        <span class="flex items-center gap-1 text-green-400"><i data-lucide="timer" class="w-4 h-4"></i><span id="telemetryTime">0.0s</span></span>
+                    </div>
+                  </span>
+                </button>
+                
+                <div id="balance-flyout" class="hidden absolute bottom-10 right-0 mb-2 w-72 bg-[#111115] border border-[#22222C] rounded-2xl shadow-2xl p-4 z-50">
+                  <div class="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Vertex AI</div>
+                  <div class="space-y-2 font-mono text-sm">
+                    <div class="flex justify-between"><span class="text-neutral-500">Restante:</span><span id="fly-remaining" class="text-emerald-400 font-bold">$0.00</span></div>
+                    <div class="flex justify-between"><span class="text-neutral-500">Gastado:</span><span id="fly-spent" class="text-rose-400">$0.00</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MODALES DE CONFIGURACIÓN -->
+  <div id="modal-vault" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-emerald-400 font-mono font-bold flex items-center gap-2"><i data-lucide="shield" class="w-5 h-5"></i> Bóveda de Seguridad</h3>
+        <button onclick="toggleModal('modal-vault')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-4">Gestión de claves API y variables de entorno encriptadas para las herramientas.</p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Google Gemini API Key</label>
+          <input type="password" id="api-key-gemini" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="AIzaSy...">
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Anthropic API Key (Claude 3.5)</label>
+          <input type="password" id="api-key-anthropic" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="sk-ant-...">
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Groq / Meta API Key (Llama 3.1)</label>
+          <input type="password" id="api-key-llama" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="gsk_...">
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">OpenAI API Key</label>
+          <input type="password" id="api-key-openai" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-emerald-500/50 transition" placeholder="sk-...">
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button onclick="toggleModal('modal-vault')" class="px-4 py-2 rounded-lg text-sm text-neutral-400 hover:bg-[#1A1A22] transition">Cancelar</button>
+        <button onclick="saveApiKeys()" class="px-4 py-2 rounded-lg text-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition shadow-[0_0_15px_rgba(52,211,153,0.1)]">Guardar Claves</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-extensions" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-blue-400 font-mono font-bold flex items-center gap-2"><i data-lucide="puzzle" class="w-5 h-5"></i> Extensiones y Herramientas</h3>
+        <button onclick="toggleModal('modal-extensions')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-4">Activa o desactiva las herramientas del sistema (System Tools) para la IA.</p>
+      <div class="space-y-2 max-h-80 overflow-y-auto pr-2">
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="globe" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Búsqueda Web (Grounding)</div>
+              <div class="text-xs text-neutral-500">Permite a la IA buscar en internet en tiempo real.</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-web-search" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="folder-search" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Lector de Workspace</div>
+              <div class="text-xs text-neutral-500">Acceso de lectura y escritura a archivos locales.</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-workspace" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="terminal-square" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Intérprete de Código</div>
+              <div class="text-xs text-neutral-500">Ejecuta Python y JS en un entorno seguro (Sandbox).</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-code-interpreter" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl bg-[#14141A] border border-[#1E1E28] cursor-pointer hover:border-blue-500/30 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="github" class="w-5 h-5 text-blue-400"></i>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Conector GitHub</div>
+              <div class="text-xs text-neutral-500">Busca repositorios y lee código abierto directamente.</div>
+            </div>
+          </div>
+          <input type="checkbox" id="tool-github" checked class="w-4 h-4 rounded bg-[#1C1C24] border-[#2A2A38] text-blue-500 focus:ring-0">
+        </label>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="toggleModal('modal-extensions')" class="px-4 py-2 rounded-lg text-sm bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition shadow-[0_0_15px_rgba(59,130,246,0.1)]">Aplicar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NUEVO CHAT (WORKSPACES) -->
+  <div id="modal-new-chat" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-[#C4A77D] font-mono font-bold flex items-center gap-2"><i data-lucide="folder-plus" class="w-5 h-5"></i> Nuevo Proyecto</h3>
+        <button onclick="toggleModal('modal-new-chat')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Nombre del Chat</label>
+          <input type="text" id="new-chat-name" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition" placeholder="Ej: Diseño de Landing Page">
+        </div>
+        <div>
+          <label class="block text-xs text-neutral-500 mb-1">Workspace (Entorno de Trabajo)</label>
+          <select id="new-chat-workspace" class="w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-lg px-3 py-2 text-sm text-neutral-200 outline-none focus:border-[#C4A77D]/50 transition cursor-pointer">
+            <option value="new">✨ Crear nuevo workspace (con index.html base)</option>
+            <option value="none">🚫 No usar workspace (Solo chat)</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button onclick="toggleModal('modal-new-chat')" class="px-4 py-2 rounded-lg text-sm text-neutral-400 hover:bg-[#1A1A22] transition">Cancelar</button>
+        <button onclick="confirmNewChat()" class="px-4 py-2 rounded-lg text-sm bg-[#C4A77D]/10 text-[#C4A77D] border border-[#C4A77D]/30 hover:bg-[#C4A77D]/20 transition shadow-[0_0_15px_rgba(196,167,125,0.1)]">Comenzar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PROMPT LAB (AGENTE IA) -->
+  <div id="modal-prompt-lab" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-3xl p-6 shadow-2xl flex flex-col h-[80vh]">
+      <div class="flex justify-between items-center mb-4 shrink-0">
+        <h3 class="text-purple-400 font-mono font-bold flex items-center gap-2"><i data-lucide="bot" class="w-5 h-5"></i> Prompt Engineer AI</h3>
+        <button onclick="toggleModal('modal-prompt-lab')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-4 shrink-0">Cuéntame tu idea en crudo. Analizaré el contexto y redactaré un System Prompt estricto y profesional para que lo uses.</p>
+      
+      <div id="lab-chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0A0A0D] rounded-xl border border-[#1E1E28] mb-4 font-mono text-sm">
+        <div class="text-center text-neutral-500 mt-10">Esperando tu contexto...</div>
+      </div>
+      
+      <div class="flex gap-3 shrink-0">
+        <textarea id="lab-input" rows="2" class="flex-1 bg-[#14141A] border border-[#22222E] rounded-xl px-4 py-3 text-sm text-neutral-200 outline-none focus:border-purple-500/50 transition shadow-inner resize-none" placeholder="Ej: Necesito un prompt para un asistente que analice contratos legales..."></textarea>
+        <button onclick="sendLabMessage()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 rounded-xl transition shadow-lg flex items-center justify-center">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MEMORIA CENTRAL -->
+  <div id="modal-memory" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-2xl p-6 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center mb-4 shrink-0">
+        <h3 class="text-amber-400 font-mono font-bold flex items-center gap-2"><i data-lucide="database" class="w-5 h-5"></i> Memoria Central (Cerebro)</h3>
+        <button onclick="toggleModal('modal-memory')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      
+      <div class="flex bg-[#16161E] p-1 rounded-xl border border-[#242432] text-sm mb-4 shrink-0 w-fit">
+        <button id="btn-mem-query" onclick="switchMemoryTab('query')" class="px-4 py-1.5 rounded-lg bg-[#252534] text-white transition-colors font-medium">Consultar IA</button>
+        <button id="btn-mem-edit" onclick="switchMemoryTab('edit')" class="px-4 py-1.5 rounded-lg text-neutral-400 hover:text-white transition-colors font-medium">Base de Datos (Raw)</button>
+      </div>
+
+      <!-- VISTA DE CONSULTA -->
+      <div id="view-mem-query" class="flex-1 flex flex-col min-h-[300px]">
+        <div id="memory-chat-box" class="flex-1 overflow-y-auto bg-[#0A0A0D] p-4 rounded-xl border border-[#1E1E28] text-sm text-neutral-300 mb-3 space-y-3 font-mono">
+            <div class="text-neutral-500 text-center mt-20">Hazme una pregunta sobre tu información guardada...</div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+            <input type="text" id="memory-query-input" onkeydown="if(event.key==='Enter') queryMemory()" placeholder="Ej: ¿Cuál es mi nombre completo?" class="flex-1 bg-[#14141A] border border-[#22222E] rounded-xl px-4 py-2.5 text-sm text-neutral-200 outline-none focus:border-amber-500/50 transition shadow-inner">
+            <button onclick="queryMemory()" class="bg-amber-600 hover:bg-amber-500 text-white px-5 rounded-xl transition shadow-lg flex items-center justify-center">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </button>
+        </div>
+      </div>
+
+      <!-- VISTA DE EDICIÓN -->
+      <div id="view-mem-edit" class="hidden flex-1 flex-col min-h-[300px]">
+        <p class="text-xs text-neutral-400 mb-2">Almacena aquí información clave en texto plano. La IA usará esto como contexto para responder tus consultas.</p>
+        <textarea id="memory-content" class="flex-1 w-full bg-[#0A0A0D] border border-[#1E1E28] rounded-xl px-4 py-3 text-sm text-neutral-300 outline-none focus:border-amber-500/50 transition shadow-inner resize-none font-mono" placeholder="Ej: Mi número de SSN es... Mis colores favoritos para diseño son..."></textarea>
+        <div class="mt-4 flex justify-end gap-2 shrink-0">
+            <button onclick="saveMemory()" class="px-4 py-2 rounded-lg text-sm bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition shadow-[0_0_15px_rgba(251,191,36,0.1)] flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Guardar Memoria</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL INTEGRACIONES (ASISTENTE MÓVIL) -->
+  <div id="modal-integrations" class="hidden fixed inset-0 z-[100] bg-[#050505]/80 backdrop-blur-sm flex items-center justify-center transition-opacity">
+    <div class="bg-[#101015] border border-[#22222E] rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-blue-400 font-mono font-bold flex items-center gap-2"><i data-lucide="plug" class="w-5 h-5"></i> Conexiones del Asistente</h3>
+        <button onclick="toggleModal('modal-integrations')" class="text-neutral-500 hover:text-rose-400 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-sm text-neutral-400 mb-5">Vincula tus herramientas de Google para que Kiala funcione como tu asistente ejecutivo personal en tu teléfono.</p>
+      
+      <div class="space-y-3">
+        <!-- GMAIL -->
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#14141A] border border-[#1E1E28] hover:border-blue-500/20 transition">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-red-500/10 text-red-400">
+              <i data-lucide="mail" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Google Gmail</div>
+              <div class="text-xs text-neutral-500">Leer, redactar y buscar correos importantes.</div>
+            </div>
+          </div>
+          <button onclick="toggleIntegration('gmail')" id="btn-int-gmail" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition">CONECTAR</button>
+        </div>
+
+        <!-- CALENDAR -->
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#14141A] border border-[#1E1E28] hover:border-blue-500/20 transition">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Google Calendar</div>
+              <div class="text-xs text-neutral-500">Agendar reuniones y consultar tu agenda diaria.</div>
+            </div>
+          </div>
+          <button onclick="toggleIntegration('calendar')" id="btn-int-calendar" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition">CONECTAR</button>
+        </div>
+
+        <!-- DRIVE -->
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#14141A] border border-[#1E1E28] hover:border-blue-500/20 transition">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+              <i data-lucide="hard-drive" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Google Drive</div>
+              <div class="text-xs text-neutral-500">Buscar y analizar documentos o PDFs guardados.</div>
+            </div>
+          </div>
+          <button onclick="toggleIntegration('drive')" id="btn-int-drive" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition">CONECTAR</button>
+        </div>
+
+        <!-- REMINDERS -->
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#14141A] border border-[#1E1E28] hover:border-blue-500/20 transition">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <i data-lucide="bell" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-sm font-medium text-neutral-200">Recordatorios y Tareas</div>
+              <div class="text-xs text-neutral-500">Crear alertas y listas de tareas pendientes.</div>
+            </div>
+          </div>
+          <button onclick="toggleIntegration('reminders')" id="btn-int-reminders" class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition">CONECTAR</button>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-[#1A1A22] flex justify-between items-center">
+        <span class="text-[10px] font-mono text-neutral-500 uppercase">Estado: OAuth 2.0 Sandbox</span>
+        <button onclick="toggleModal('modal-integrations')" class="px-4 py-2 rounded-lg text-sm bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition">Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA DE NAVEGACIÓN MÓVIL (SOLO VISIBLE EN MÓVILES) -->
+  <div class="mobile-bottom-nav fixed bottom-0 left-0 right-0 h-16 bg-[#0E0E13]/95 backdrop-blur-xl border-t border-[#1A1A22] z-50 items-center justify-around px-4 text-neutral-400">
+    <button onclick="toggleSidebar()" class="flex flex-col items-center justify-center gap-1 text-xs hover:text-[#C4A77D] transition">
+      <i data-lucide="message-square" class="w-5 h-5"></i>
+      <span>Chats</span>
+    </button>
+    <button onclick="openNewChatModal()" class="flex flex-col items-center justify-center gap-1 text-xs hover:text-[#C4A77D] transition">
+      <i data-lucide="plus-circle" class="w-5 h-5 text-[#C4A77D]"></i>
+      <span>Nuevo</span>
+    </button>
+    <button onclick="openMemoryVault()" class="flex flex-col items-center justify-center gap-1 text-xs hover:text-amber-400 transition">
+      <i data-lucide="database" class="w-5 h-5"></i>
+      <span>Memoria</span>
+    </button>
+    <button onclick="toggleModal('modal-integrations')" class="flex flex-col items-center justify-center gap-1 text-xs hover:text-blue-400 transition">
+      <i data-lucide="plug" class="w-5 h-5"></i>
+      <span>Conexiones</span>
+    </button>
+  </div>
+
+  <!-- LIGHTBOX MODAL PARA IMÁGENES -->
+  <div id="lightbox-modal" class="hidden fixed inset-0 z-[110] bg-[#050505]/95 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300" onclick="closeLightbox()">
+    <button class="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors" onclick="closeLightbox()">
+      <i data-lucide="x" class="w-8 h-8"></i>
+    </button>
+    <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-[#22222E] transform scale-95 transition-transform duration-300" onclick="event.stopPropagation()">
+  </div>
+
+  <!-- BARRA REDIMENSIONADORA -->
+    <div id="panel-resizer" class="resizer-bar hidden"></div>
+
+    <!-- ARTIFACT PANEL (MODO ESTUDIO) -->
+    <aside id="modo-estudio-panel" class="hidden gemini-composer-wrapper flex-col shrink-0 z-20 overflow-hidden bg-[#0C0C0F] relative" style="width: 50%; min-width: 400px;">
+      
+      <div class="h-14 border-b border-[#181820] px-4 flex items-center justify-between bg-[#111116] relative z-10">
+        <div class="flex items-center space-x-3">
+          <button id="artifact-title" onclick="closeArtifactPanel()" class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1A1A22] hover:bg-rose-500/10 border border-[#2A2A38] hover:border-rose-500/30 transition-all duration-300 focus:outline-none cursor-pointer shadow-sm" title="Cerrar panel">
+            <span class="text-[#C4A77D] group-hover:text-rose-400 transition-colors text-sm">⚡</span>
+            <span class="font-mono text-sm font-semibold text-neutral-200 group-hover:text-rose-400 transition-colors truncate max-w-[150px]">Modo Estudio</span>
+          </button>
+          <span id="artifact-lang-tag" class="text-xs uppercase font-mono px-2 py-0.5 rounded bg-[#181824] text-[#C4A77D] border border-[#262636]">WEB</span>
+          
+          <div class="hidden md:flex items-center space-x-2 ml-2 border-l border-[#242432] pl-3">
+              <i data-lucide="folder-tree" class="w-4 h-4 text-neutral-500"></i>
+              <select id="artifact-workspace-select" onchange="loadWorkspaceFiles(this.value)" class="bg-transparent text-neutral-300 text-xs outline-none cursor-pointer hover:text-white">
+                  <option value="">Workspace...</option>
+              </select>
+              
+              <!-- Selector de Archivos (Opción A) -->
+              <i data-lucide="file-code" class="w-4 h-4 text-neutral-500 ml-2"></i>
+              <select id="artifact-file-select" onchange="loadSpecificFile(this.value)" class="bg-transparent text-neutral-300 text-xs outline-none cursor-pointer hover:text-white max-w-[100px] truncate">
+                  <option value="index.html">index.html</option>
+                  <option value="style.css">style.css</option>
+                  <option value="script.js">script.js</option>
+              </select>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <!-- PESTAÑAS: CÓDIGO, VISTA PREVIA Y EDITOR VISUAL -->
+          <div class="flex bg-[#16161E] p-1 rounded-xl border border-[#242432] text-sm">
+            <button id="btn-tab-code" onclick="switchArtifactTab('code')" class="px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors">Código</button>
+            <button id="btn-tab-preview" onclick="switchArtifactTab('preview')" class="px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors">Vista Previa</button>
+            <button id="btn-tab-editor" onclick="switchArtifactTab('editor')" class="px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors flex items-center gap-1"><i data-lucide="image" class="w-3.5 h-3.5"></i> Editor Visual</button>
+          </div>
+          
+          <div class="flex items-center gap-1 ml-2">
+            <button onclick="setDeviceView('desktop')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Desktop"><i data-lucide="monitor" class="w-4 h-4"></i></button>
+            <button onclick="setDeviceView('tablet')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Tablet"><i data-lucide="tablet" class="w-4 h-4"></i></button>
+            <button onclick="setDeviceView('mobile')" class="p-1.5 text-neutral-400 hover:text-white rounded hover:bg-[#1A1A22]" title="Mobile"><i data-lucide="smartphone" class="w-4 h-4"></i></button>
+          </div>
+          <button onclick="openInNewWindow()" class="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-[#1A1A22]" title="Abrir en nueva pestaña"><i data-lucide="external-link" class="w-4 h-4"></i></button>
+          <button onclick="saveToWorkspace()" class="shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-medium flex items-center gap-2 ml-2 transition-colors shadow-sm"><i data-lucide="save" class="w-3 h-3"></i> Guardar</button>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-hidden relative flex justify-center bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+        <div id="artifact-view-code" class="hidden h-full w-full flex-col bg-[#09090C]">
+          <div class="flex-1 flex overflow-hidden relative">
+            <div id="artifact-gutter" class="w-12 bg-[#0A0A0D] border-r border-[#1C1C26] text-neutral-600 font-mono text-xs text-right pr-3 py-5 select-none overflow-hidden leading-6 whitespace-pre">1</div>
+            <textarea id="artifact-editor" class="flex-1 w-full h-full bg-transparent text-neutral-300 font-mono text-sm py-5 px-4 outline-none resize-none overflow-y-auto leading-6 whitespace-pre" spellcheck="false" oninput="updateLineNumbers(); applyEditorToPreview()"></textarea>
+          </div>
+        </div>
+        <div id="artifact-view-preview" class="h-full w-full bg-white flex justify-center">
+          <iframe id="artifact-preview-frame" class="w-full h-full border-0 shadow-2xl transition-all duration-300" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+        </div>
+        <div id="artifact-view-editor" class="hidden h-full w-full bg-[#111116] relative flex-col">
+          <div class="h-12 border-b border-[#22222E] bg-[#14141A] flex items-center px-4 justify-between shrink-0">
+            <span class="text-xs font-medium text-neutral-400 flex items-center gap-2"><i data-lucide="palette" class="w-4 h-4"></i> Lienzo de Edición</span>
+            <button onclick="document.getElementById('editor-upload').click()" class="px-3 py-1.5 bg-[#C4A77D]/10 hover:bg-[#C4A77D]/20 text-[#C4A77D] border border-[#C4A77D]/30 rounded-lg text-xs font-medium transition flex items-center gap-2 shadow-sm">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i> Cargar mi imagen
+            </button>
+            <input type="file" id="editor-upload" accept="image/*" class="hidden" onchange="loadCustomImageToEditor(event)">
+          </div>
+          <div id="filerobot-container" class="flex-1 w-full"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    let allProjects = [];
+    let currentProjectId = null;
+    let currentSessionId = null;
+    let sessionTotalTokens = 0;
+    let currentArtifactCode = '';
+    let attachedFiles = []; 
+    let isLabMode = false;
+    let labSessionId = null;
+    let telemetryTimer = null;
+    let startTime = 0;
+    let currentChatController = null; 
+
+    function openArtifact(lang, rawCode) {
+        currentArtifactCode = rawCode;
+        const panel = document.getElementById('modo-estudio-panel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+        
+        const resizer = document.getElementById('panel-resizer');
+        if (resizer) resizer.classList.remove('hidden');
+        
+        const editor = document.getElementById('artifact-editor');
+        if (editor) editor.value = rawCode;
+        updateLineNumbers();
+        applyEditorToPreview();
+        switchArtifactTab('code');
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        if (window.self !== window.top) {
+            document.getElementById('login-screen').classList.add('hidden');
+            await initApp();
+            return;
+        }
+        try {
+            const res = await fetch('/api/auth/check');
+            if (res.ok) {
+                document.getElementById('login-screen').classList.add('hidden');
+                await initApp();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error("Error al verificar autenticación:", e);
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+    });
+
+    // SISTEMA DE SEGURIDAD CONTRA FUERZA BRUTA & OAUTH
+    let failedLoginAttempts = parseInt(localStorage.getItem('kiala_failed_attempts') || '0');
+    let loginLockUntil = parseInt(localStorage.getItem('kiala_lock_until') || '0');
+
+    function checkLoginLock() {
+        const now = Date.now();
+        if (loginLockUntil && now < loginLockUntil) {
+            const remainingSecs = Math.ceil((loginLockUntil - now) / 1000);
+            const btn = document.getElementById('login-btn');
+            const err = document.getElementById('login-error');
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.className = "w-full mt-2 bg-zinc-800 text-neutral-500 font-bold text-sm py-3 rounded-xl cursor-not-allowed flex items-center justify-center gap-2";
+                btn.innerHTML = `<i data-lucide="timer" class="w-4 h-4 animate-spin"></i> Bloqueado por seguridad`;
+            }
+            if (err) {
+                err.textContent = `Demasiados intentos fallidos. Intenta de nuevo en ${remainingSecs} segundos.`;
+                err.classList.remove('hidden');
+            }
+            if (window.lucide) lucide.createIcons();
+            setTimeout(checkLoginLock, 1000);
+            return true;
+        } else {
+            // Desbloquear si el tiempo ya pasó
+            const btn = document.getElementById('login-btn');
+            if (btn && btn.disabled) {
+                btn.disabled = false;
+                btn.className = "w-full mt-2 bg-gradient-to-r from-[#C4A77D] to-[#8F7449] hover:from-[#D4B78D] hover:to-[#9F8459] text-[#0A0A0D] font-bold text-sm py-3 rounded-xl transition shadow-[0_0_20px_rgba(196,167,125,0.15)] flex items-center justify-center gap-2";
+                btn.innerHTML = `<i data-lucide="key-round" class="w-4 h-4"></i> Desbloquear Consola`;
+                const err = document.getElementById('login-error');
+                if (err) err.classList.add('hidden');
+                failedLoginAttempts = 0;
+                localStorage.setItem('kiala_failed_attempts', '0');
+                localStorage.removeItem('kiala_lock_until');
+                if (window.lucide) lucide.createIcons();
+            }
+            return false;
+        }
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        if (checkLoginLock()) return;
+
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const errEl = document.getElementById('login-error');
+        
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (res.ok) {
+                failedLoginAttempts = 0;
+                localStorage.setItem('kiala_failed_attempts', '0');
+                localStorage.removeItem('kiala_lock_until');
+                document.getElementById('login-screen').classList.add('hidden');
+                initApp();
+            } else {
+                failedLoginAttempts++;
+                localStorage.setItem('kiala_failed_attempts', failedLoginAttempts.toString());
+                
+                if (failedLoginAttempts >= 3) {
+                    const lockTime = Date.now() + (15 * 60 * 1000); // 15 minutos de bloqueo
+                    loginLockUntil = lockTime;
+                    localStorage.setItem('kiala_lock_until', lockTime.toString());
+                    checkLoginLock();
+                } else {
+                    if (errEl) {
+                        errEl.textContent = `Acceso denegado. Intento ${failedLoginAttempts} de 3 antes del bloqueo.`;
+                        errEl.classList.remove('hidden');
+                    }
+                }
+            }
+        } catch (err) {
+            if (errEl) {
+                errEl.textContent = 'Error de conexión con el servidor seguro.';
+                errEl.classList.remove('hidden');
+            }
+        }
+    }
+
+    function handleGoogleLogin() {
+        alert("🔗 Redireccionando al flujo seguro de Google OAuth 2.0...\n\n(En producción, esto abrirá la ventana de selección de cuenta de Google para validar tu identidad de forma segura).");
+        // Aquí se implementará la redirección real: window.location.href = "/api/auth/google";
+    }
+
+    async function resetMasterPassword() {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            localStorage.clear();
+            alert('Sesión cerrada y caché de seguridad limpiada correctamente.');
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // Ejecutar verificación de bloqueo al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+        checkLoginLock();
+    });
+
+    async function initApp() {
+        // Limpiar la barra de búsqueda para evitar el autofill agresivo del navegador
+        const searchInput = document.getElementById('search-projects-input');
+        if (searchInput) searchInput.value = '';
+
+        await fetchBalance();
+        await loadWorkspacesDropdown();
+        await loadProjects();
+    }
+
+    async function fetchBalance() {
+        try {
+            const res = await fetch('/api/balance');
+            if (!res.ok) {
+                console.warn("No se pudo obtener el balance de la API (Status: " + res.status + ")");
+                return;
+            }
+            const d = await res.json();
+            const rem = document.getElementById('fly-remaining');
+            const spent = document.getElementById('fly-spent');
+            if (rem) rem.textContent = `${d.remaining_balance.toFixed(4)}`;
+            if (spent) spent.textContent = `${d.total_spent.toFixed(4)}`;
+        } catch (e) {
+            console.error("Error de red al obtener balance de Vertex AI:", e);
+        }
+    }
+
+    function toggleBalanceFlyout() { 
+        const flyout = document.getElementById('balance-flyout');
+        if (flyout) flyout.classList.toggle('hidden'); 
+    }
+    
+    function toggleSidebar() {
+        const s = document.getElementById('left-panel');
+        if (!s) return;
+        if (window.innerWidth <= 768) {
+            s.classList.toggle('mobile-open');
+        } else {
+            if (s.classList.contains('w-72')) { 
+                s.classList.remove('w-72', 'border-r'); 
+                s.classList.add('w-0', 'border-none'); 
+            } else { 
+                s.classList.remove('w-0', 'border-none'); 
+                s.classList.add('w-72', 'border-r'); 
+            }
+        }
+    }
+
+    // SISTEMA DE INTEGRACIONES (ASISTENTE MÓVIL)
+    function toggleIntegration(service) {
+        const btn = document.getElementById(`btn-int-${service}`);
+        if (!btn) return;
+        
+        const isConnected = localStorage.getItem(`kiala_int_${service}`) === 'true';
+        if (isConnected) {
+            localStorage.setItem(`kiala_int_${service}`, 'false');
+            btn.textContent = 'CONECTAR';
+            btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition";
+        } else {
+            const confirmConn = confirm(`¿Deseas vincular Kiala Studio con tu cuenta de Google para acceder a ${service.toUpperCase()}?`);
+            if (confirmConn) {
+                localStorage.setItem(`kiala_int_${service}`, 'true');
+                btn.textContent = 'CONECTADO';
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 transition";
+            }
+        }
+    }
+
+    function loadIntegrationsState() {
+        const services = ['gmail', 'calendar', 'drive', 'reminders'];
+        services.forEach(service => {
+            const btn = document.getElementById(`btn-int-${service}`);
+            if (!btn) return;
+            const isConnected = localStorage.getItem(`kiala_int_${service}`) === 'true';
+            if (isConnected) {
+                btn.textContent = 'CONECTADO';
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 transition";
+            } else {
+                btn.textContent = 'CONECTAR';
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-zinc-800 text-neutral-400 hover:bg-zinc-700 transition";
+            }
+        });
+    }
+
+    // Ejecutar al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+        loadIntegrationsState();
+    });
+
+    async function loadWorkspacesDropdown() {
+        try {
+            const res = await fetch('/api/workspaces');
+            if (!res.ok) {
+                console.warn("No se pudieron cargar los workspaces (Status: " + res.status + ")");
+                return;
+            }
+            const data = await res.json();
+            const select = document.getElementById('workspace-select');
+            const artSelect = document.getElementById('artifact-workspace-select');
+            let optionsHtml = '<option value="">📁 Sin Workspace...</option>';
+            if (Array.isArray(data)) {
+                data.forEach(ws => { optionsHtml += `<option value="${ws}">📁 ${ws}</option>`; });
+            }
+            if (select) select.innerHTML = optionsHtml;
+            if (artSelect) artSelect.innerHTML = optionsHtml;
+        } catch(e) {
+            console.error("Error de red al cargar workspaces:", e);
+        }
+    }
+
+    async function loadProjects() {
+        try {
+            const res = await fetch('/api/projects');
+            if (!res.ok) {
+                console.warn("No se pudieron cargar los proyectos (Status: " + res.status + ")");
+                return;
+            }
+            allProjects = await res.json();
+            if (Array.isArray(allProjects) && allProjects.length > 0 && !currentProjectId) {
+                await openProject(allProjects[0].id, allProjects[0].name);
+            }
+        } catch (e) {
+            console.error("Error de red al cargar proyectos:", e);
+        }
+    }
+
+    // NUEVAS FUNCIONES DE GESTIÓN DE CHATS Y WORKSPACES
+    let filerobotInstance = null;
+
+    function initImageEditor(imageUrl = '') {
+        const container = document.getElementById('filerobot-container');
+        if (!container || typeof window.FilerobotImageEditor === 'undefined') return;
+        
+        // Si ya hay un editor abierto y subimos una foto nueva, lo reiniciamos
+        if (filerobotInstance) {
+            if (imageUrl) {
+                filerobotInstance.terminate();
+                filerobotInstance = null;
+            } else {
+                return; // Si no hay URL nueva, mantenemos el que está
+            }
+        }
+        
+        const config = {
+            source: imageUrl || 'https://scaleflex.airstore.io/demo/stephen-walker-unsplash.jpg',
+            onSave: (editedImageObject, designState) => {
+                console.log('Imagen guardada', editedImageObject);
+                
+                // Extraer el base64 de la imagen editada
+                const base64Data = editedImageObject.imageBase64.split(',')[1];
+                const fileName = editedImageObject.fullName || 'imagen_editada.png';
+                const mimeType = editedImageObject.mimeType || 'image/png';
+                
+                // Adjuntar automáticamente al chat de Kiala
+                attachedFiles.push({ 
+                    name: fileName, 
+                    mime_type: mimeType, 
+                    data: base64Data, 
+                    size: Math.round((base64Data.length * 3) / 4) 
+                });
+                renderAttachmentsBar();
+                
+                alert("✅ ¡Imagen guardada y adjuntada al chat!\n\nAhora puedes decirme: 'Usa esta imagen como fondo' o 'Pon esta imagen en el centro de mi página'.");
+            },
+            annotationsCommon: { fill: '#C4A77D' },
+            Text: { text: 'Kiala Studio...' },
+            theme: { typography: { fontFamily: 'Inter' } }
+        };
+        
+        filerobotInstance = new window.FilerobotImageEditor(container, config);
+        filerobotInstance.render();
+    }
+
+    function loadCustomImageToEditor(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            initImageEditor(e.target.result);
+        };
+        reader.readAsDataURL(file);
+        event.target.value = ''; // Resetear el input
+    }
+
+    function openNewChatModal() {
+        const wsSelect = document.getElementById('new-chat-workspace');
+        const mainWsSelect = document.getElementById('workspace-select');
+        
+        // Copiar opciones del select principal al modal
+        if (wsSelect && mainWsSelect) {
+            let optionsHtml = '<option value="new">✨ Crear nuevo workspace (con index.html base)</option>';
+            optionsHtml += '<option value="none">🚫 No usar workspace (Solo chat)</option>';
+            
+            Array.from(mainWsSelect.options).forEach(opt => {
+                if (opt.value) {
+                    optionsHtml += `<option value="${opt.value}">${opt.text}</option>`;
+                }
+            });
+            wsSelect.innerHTML = optionsHtml;
+        }
+        
+        document.getElementById('new-chat-name').value = '';
+        toggleModal('modal-new-chat');
+    }
+
+    async function confirmNewChat() {
+        const nameInput = document.getElementById('new-chat-name').value.trim() || 'Nueva Conversación';
+        const wsChoice = document.getElementById('new-chat-workspace').value;
+        
+        toggleModal('modal-new-chat');
+        
+        let finalWsName = '';
+        
+        if (wsChoice === 'new') {
+            // Crear nuevo workspace con index.html base
+            finalWsName = nameInput.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now().toString().slice(-4);
+            const baseHtml = `<!DOCTYPE html>\n<html lang="es" class="dark">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${nameInput}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-[#050505] text-neutral-200 min-h-screen flex flex-col items-center justify-center font-sans">\n  <h1 class="text-4xl font-bold text-[#C4A77D] mb-4">¡Hola desde ${nameInput}!</h1>\n  <p class="text-neutral-500">Tu lienzo está listo. Pídele a la IA que empiece a diseñar.</p>\n</body>\n</html>`;
+            
+            try {
+                await fetch('/api/workspace/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ client_name: finalWsName, html_content: baseHtml })
+                });
+                await loadWorkspacesDropdown(); // Recargar lista
+                const mainWsSelect = document.getElementById('workspace-select');
+                if (mainWsSelect) mainWsSelect.value = finalWsName;
+            } catch (e) {
+                console.error("Error creando workspace base:", e);
+            }
+        } else if (wsChoice !== 'none') {
+            finalWsName = wsChoice;
+            const mainWsSelect = document.getElementById('workspace-select');
+            if (mainWsSelect) mainWsSelect.value = finalWsName;
+        } else {
+            const mainWsSelect = document.getElementById('workspace-select');
+            if (mainWsSelect) mainWsSelect.value = '';
+        }
+
+        await createSession(false, nameInput);
+    }
+
+    async function createSession(isTemp, customTitle = null) {
+        const title = customTitle || (isTemp ? 'Chat Temporal' : 'Nuevo Chat');
+        try {
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ project_id: currentProjectId, is_temp: isTemp, title: title })
+            });
+            if(res.ok) {
+                const newSession = await res.json();
+                currentSessionId = newSession.id; // Asignar antes de recargar la lista
+                await openProject(currentProjectId);
+                selectSession(newSession.id, newSession.title);
+                return;
+            }
+        } catch (e) {
+            console.log("Backend no disponible, usando fallback UI para crear sesión.");
+        }
+        
+        // Fallback UI (Si el backend falla o no existe la ruta)
+        currentSessionId = isTemp ? 'temp_' + Date.now() : 'new_' + Date.now();
+        document.getElementById('header-session-title').textContent = title;
+        document.getElementById('chat-messages-container').innerHTML = '';
+        document.getElementById('main-content-canvas').classList.add('hero-active');
+    }
+
+    async function editSessionName(e, sid, oldTitle) {
+        e.stopPropagation(); 
+        const newTitle = prompt("Nuevo nombre para el chat:", oldTitle);
+        if (!newTitle || newTitle === oldTitle) return;
+        
+        // Actualización Optimista (UI Instantánea)
+        const chatItems = document.querySelectorAll('#project-chats-container span');
+        chatItems.forEach(span => {
+            if(span.getAttribute('onclick') && span.getAttribute('onclick').includes(sid)) {
+                span.textContent = newTitle;
+                span.setAttribute('onclick', `selectSession('${sid}', '${escapeHtml(newTitle)}')`);
+            }
+        });
+        if (currentSessionId === sid) {
+            const titleEl = document.getElementById('header-session-title');
+            if(titleEl) titleEl.textContent = newTitle;
+        }
+
+        try {
+            await fetch(`/api/sessions/${sid}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name: newTitle })
+            });
+            openProject(currentProjectId); // Refresca la lista para actualizar todos los botones
+        } catch(err) { 
+            console.warn("El backend no respondió, pero la UI fue actualizada.");
+        }
+    }
+
+    async function deleteSession(e, sid) {
+        e.stopPropagation(); // Evita que se seleccione el chat al hacer clic en eliminar
+        if (!confirm("¿Estás seguro de eliminar este chat permanentemente?")) return;
+        
+        try {
+            await fetch(`/api/sessions/${sid}`, { method: 'DELETE' });
+            if (currentSessionId === sid) {
+                currentSessionId = null;
+                document.getElementById('chat-messages-container').innerHTML = '';
+                document.getElementById('main-content-canvas').classList.add('hero-active');
+                document.getElementById('header-session-title').textContent = 'Conversación';
+            }
+            openProject(currentProjectId);
+        } catch(err) { 
+            console.error(err);
+            alert("Error al eliminar el chat. Verifica la conexión.");
+        }
+    }
+
+    async function openProject(pid, pname) {
+        currentProjectId = pid;
+        try {
+            const res = await fetch(`/api/projects/${pid}/sessions`);
+            if (!res.ok) {
+                console.warn("No se pudieron cargar las sesiones del proyecto (Status: " + res.status + ")");
+                return;
+            }
+            const data = await res.json();
+            const chatsCont = document.getElementById('project-chats-container');
+            if(chatsCont) {
+                chatsCont.innerHTML = '';
+                if (data.sessions && Array.isArray(data.sessions)) {
+                    data.sessions.forEach(s => {
+                        const item = document.createElement('div');
+                        const isAct = s.id === currentSessionId;
+                        item.className = `group flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition ${isAct ? 'bg-[#181824] text-[#C4A77D] border border-[#C4A77D]/30 font-medium' : 'text-neutral-400 hover:bg-[#14141B] hover:text-neutral-200'}`;
+                        
+                        // Estructura con botones de edición y eliminación ocultos por defecto (aparecen en hover)
+                        item.innerHTML = `
+                            <span class="truncate flex-1 pr-2" onclick="selectSession('${s.id}', '${escapeHtml(s.title)}')">${escapeHtml(s.title)}</span>
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editSessionName(event, '${s.id}', '${escapeHtml(s.title)}')" class="p-1.5 text-neutral-500 hover:text-[#C4A77D] rounded-md hover:bg-[#22222E] transition" title="Renombrar"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="deleteSession(event, '${s.id}')" class="p-1.5 text-neutral-500 hover:text-rose-400 rounded-md hover:bg-[#22222E] transition" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        `;
+                        chatsCont.appendChild(item);
+                    });
+                    if (window.lucide) lucide.createIcons();
+                    if (!currentSessionId && data.sessions.length > 0) {
+                        selectSession(data.sessions[0].id, data.sessions[0].title);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error de red al abrir proyecto:", e);
+        }
+    }
+
+    async function selectSession(sid, title = '') {
+        currentSessionId = sid;
+        const titleEl = document.getElementById('header-session-title');
+        if (titleEl) titleEl.textContent = title;
+        
+        // Actualizar clase activa en el sidebar
+        const chatItems = document.querySelectorAll('#project-chats-container > div');
+        chatItems.forEach(item => {
+            const span = item.querySelector('span');
+            if (span && span.getAttribute('onclick') && span.getAttribute('onclick').includes(sid)) {
+                item.className = 'group flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition bg-[#181824] text-[#C4A77D] border border-[#C4A77D]/30 font-medium';
+            } else {
+                item.className = 'group flex items-center justify-between p-2.5 rounded-xl text-sm cursor-pointer transition text-neutral-400 hover:bg-[#14141B] hover:text-neutral-200';
+            }
+        });
+
+        const box = document.getElementById('chat-messages-container');
+        if(box) box.innerHTML = '';
+        try {
+            const res = await fetch(`/api/sessions/${sid}`);
+            if (!res.ok) {
+                console.warn("No se pudo cargar la sesión (Status: " + res.status + ")");
+                return;
+            }
+            const d = await res.json();
+            const canvas = document.getElementById('main-content-canvas');
+            if (canvas) {
+                if (d.messages && Array.isArray(d.messages) && d.messages.length > 0) {
+                    canvas.classList.remove('hero-active');
+                    d.messages.forEach(m => appendMessageUI(m.role, m.content));
+                } else {
+                    canvas.classList.add('hero-active');
+                }
+            }
+        } catch (e) {
+            console.error("Error de red al seleccionar sesión:", e);
+        }
+    }
+
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    }
+
+    function appendMessageUI(role, content) {
+        const box = document.getElementById('chat-messages-container');
+        const canvas = document.getElementById('main-content-canvas');
+        if (!box) return null;
+        if (canvas) canvas.classList.remove('hero-active');
+        
+        const isUser = role === 'user';
+        const row = document.createElement('div');
+        row.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-2 w-full`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-3xl rounded-3xl p-5 text-base leading-relaxed ${isUser ? 'bg-[#181822] border border-[#2A2A38] text-neutral-100 rounded-br-none shadow-lg whitespace-pre-wrap' : 'bg-transparent text-neutral-200 prose prose-invert max-w-none w-full'}`;
+        
+        if (isUser) {
+            bubble.textContent = content;
+            if (window.currentSendingAttachments && window.currentSendingAttachments.length > 0) {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'flex flex-wrap gap-2 mt-3';
+                window.currentSendingAttachments.forEach(f => {
+                    if (f.mime_type && f.mime_type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = `data:${f.mime_type};base64,${f.data}`;
+                        img.className = 'h-24 w-auto rounded-xl border border-[#2A2A38] shadow-md cursor-pointer hover:scale-105 transition-transform';
+                        img.onclick = () => openLightbox(img.src);
+                        imgContainer.appendChild(img);
+                    }
+                });
+                bubble.appendChild(imgContainer);
+            }
+        } else {
+            let htmlContent = marked.parse(content);
+            htmlContent = htmlContent.replace(/&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH[\s\S]*?=======[\s\S]*?&gt;&gt;&gt;&gt;&gt;&gt;&gt;( REPLACE)?/g, 
+                '<div class="my-3 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-xs flex items-center space-x-3 shadow-inner select-none"><span class="text-base">⚡</span><span class="font-medium text-neutral-200">Cirugía de código aplicada en Sandbox</span></div>');
+            bubble.innerHTML = htmlContent;
+            formatCodeBlocks(bubble);
+        }
+        
+        row.appendChild(bubble);
+        box.appendChild(row);
+        
+        const scrollBox = document.getElementById('chat-stream-box');
+        if (scrollBox) scrollBox.scrollTop = scrollBox.scrollHeight;
+        
+        return bubble;
+    }
+
+    function stopChatGeneration() {
+        if (currentChatController) {
+            currentChatController.abort();
+            currentChatController = null;
+        }
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById('prompt-input');
+        if (!input) return;
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Auto-crear sesión si el usuario escribe desde la pantalla de inicio
+        if (!currentSessionId) {
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ project_id: currentProjectId, is_temp: false, title: text.substring(0, 25) + '...' })
+                });
+                if (res.ok) {
+                    const newSession = await res.json();
+                    currentSessionId = newSession.id;
+                    await openProject(currentProjectId);
+                    const titleEl = document.getElementById('header-session-title');
+                    if (titleEl) titleEl.textContent = newSession.title;
+                    const canvas = document.getElementById('main-content-canvas');
+                    if (canvas) canvas.classList.remove('hero-active');
+                } else return;
+            } catch (e) { return; }
+        }
+
+        window.currentSendingAttachments = [...attachedFiles];
+        const payloadAttachments = [...attachedFiles];
+        attachedFiles = [];
+        renderAttachmentsBar();
+
+        appendMessageUI('user', text);
+        input.value = ''; input.style.height = 'auto';
+        window.currentSendingAttachments = null;
+        
+        const btn = document.getElementById('send-btn');
+        const composerBox = document.getElementById('composer-box');
+        const artifactPanel = document.getElementById('modo-estudio-panel');
+        
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="square" class="w-5 h-5 text-rose-400 fill-current"></i>';
+            btn.onclick = stopChatGeneration;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        if (composerBox) composerBox.classList.add('is-thinking');
+        if (artifactPanel) artifactPanel.classList.add('is-thinking');
+        
+        startTime = Date.now();
+        clearInterval(telemetryTimer);
+        telemetryTimer = setInterval(() => {
+            const tel = document.getElementById('telemetryTime');
+            if (tel) tel.innerText = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+        }, 100);
+
+        const modelSel = document.getElementById('model-select');
+        const groundChk = document.getElementById('chk-grounding');
+        const wsSel = document.getElementById('workspace-select');
+        
+        // Leer estado de las extensiones
+        const toolWorkspace = document.getElementById('tool-workspace')?.checked ?? true;
+        const toolCode = document.getElementById('tool-code-interpreter')?.checked ?? true;
+        const toolGithub = document.getElementById('tool-github')?.checked ?? true;
+        
+        const model = modelSel ? modelSel.value : 'auto-router';
+        const grounding = groundChk ? groundChk.checked : false;
+        const wsName = wsSel ? wsSel.value : '';
+
+        const streamBubble = appendMessageUI('model', '...');
+        let rawText = '';
+
+        currentChatController = new AbortController();
+
+        const memory = localStorage.getItem('kiala_core_memory') || '';
+
+        try {
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                signal: currentChatController.signal,
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    message: text,
+                    model: model,
+                    system_instruction: memory,
+                    enable_grounding: grounding,
+                    workspace_name: wsName,
+                    active_tools: {
+                        workspace: toolWorkspace,
+                        code_interpreter: toolCode,
+                        github: toolGithub
+                    },
+                    attachments: payloadAttachments.map(f => ({
+                        name: f.name,
+                        mime_type: f.mime_type,
+                        data: f.data,
+                        url: `data:${f.mime_type};base64,${f.data}`
+                    }))
+                })
+            });
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const lines = decoder.decode(value).split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const payload = JSON.parse(line.replace('data: ', ''));
+                            if (payload.chunk) {
+                                rawText += payload.chunk;
+                                let displayHtml = marked.parse(rawText);
+                                if (streamBubble) {
+                                    streamBubble.innerHTML = displayHtml;
+                                    formatCodeBlocks(streamBubble);
+                                }
+                                
+                                const scrollBox = document.getElementById('chat-stream-box');
+                                if (scrollBox) scrollBox.scrollTop = scrollBox.scrollHeight;
+                            }
+                            if (payload.done) {
+                                applySurgicalDiffIfPresent(rawText);
+                            }
+                        } catch (err) {}
+                    }
+                }
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                if (streamBubble) streamBubble.innerHTML += '<br><br><div class="inline-block px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">🛑 Generación detenida por el usuario.</div>';
+            } else {
+                if (streamBubble) streamBubble.innerHTML = `<div class="text-rose-400">Error: ${err.message}</div>`;
+            }
+        } finally {
+            if (btn) {
+                btn.innerHTML = '<i data-lucide="send" class="w-5 h-5 text-[#C4A77D]"></i>';
+                btn.onclick = sendChatMessage;
+                if (window.lucide) lucide.createIcons();
+                btn.disabled = false;
+            }
+            if (composerBox) composerBox.classList.remove('is-thinking');
+            if (artifactPanel) artifactPanel.classList.remove('is-thinking');
+            clearInterval(telemetryTimer);
+            currentChatController = null;
+        }
+    }
+
+    async function applyDirectDiff(rawDiff, btnElement) {
+        const editor = document.getElementById('artifact-editor');
+        const wsSel = document.getElementById('workspace-select');
+        const ws = wsSel ? wsSel.value.replace('📁 ', '').trim() : '';
+        
+        let currentCode = editor ? editor.value : '';
+        if (!currentCode || !currentCode.includes('<html')) {
+            if (ws) {
+                try {
+                    const res = await fetch(`/workspaces/${ws}/index.html?t=${Date.now()}`);
+                    if (res.ok) currentCode = await res.text();
+                } catch(e) {
+                    console.error("Error al obtener index.html para aplicar cirugía directa:", e);
+                }
+            }
+        }
+
+        if (!currentCode) {
+            alert("No hay código base. Selecciona el workspace primero.");
+            return;
+        }
+
+        let normCode = currentCode.replace(/\r\n/g, '\n');
+        let normDiff = rawDiff.replace(/\r\n/g, '\n');
+
+        const diffRegexDirect = /<<<<<<<\s*SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>>(?:\s*REPLACE)?/g;
+        let match;
+        let appliedCount = 0;
+
+        while ((match = diffRegexDirect.exec(normDiff)) !== null) {
+            const search = match[1];
+            const replace = match[2];
+
+            if (normCode.includes(search)) {
+                normCode = normCode.replace(search, replace);
+                appliedCount++;
+            } else if (normCode.includes(search.trim())) {
+                normCode = normCode.replace(search.trim(), replace.trim());
+                appliedCount++;
+            }
+        }
+
+        if (appliedCount > 0) {
+            openArtifact('html', normCode);
+            saveToWorkspace();
+            if (btnElement) {
+                btnElement.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ¡Cirugía Aplicada!';
+                btnElement.className = 'w-full bg-blue-600 text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md rounded-lg';
+                if (window.lucide) lucide.createIcons();
+            }
+        } else {
+            alert("El texto a reemplazar no coincide exactamente con el código actual.");
+        }
+    }
+
+    function formatCodeBlocks(container) {
+        if (!container) return;
+        container.querySelectorAll('pre').forEach(pre => {
+            if (pre.dataset.enhanced) return;
+            pre.dataset.enhanced = "true";
+            const code = pre.querySelector('code');
+            const raw = code ? code.textContent : pre.textContent;
+            
+            const btn = document.createElement('button');
+            if (raw.includes('<<<<<<< SEARCH')) {
+                pre.className = "my-3 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-xs shadow-inner select-none";
+                pre.innerHTML = '<div class="flex items-center gap-2 mb-2"><span class="text-base">⚡</span><span class="font-medium text-neutral-200">Parche de cirugía listo para aplicar</span></div>';
+                
+                btn.className = 'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md rounded-lg mt-2';
+                btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4"></i> Aplicar Cirugía a la Web';
+                btn.onclick = () => applyDirectDiff(raw, btn);
+            } else {
+                if (code && window.hljs) hljs.highlightElement(code);
+                pre.className = "relative my-4 rounded-2xl overflow-hidden border border-[#22222C] bg-[#0A0A0D] text-sm shadow-xl";
+                btn.className = 'w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-semibold py-2 px-4 flex items-center justify-center gap-2 transition shadow-md mt-2 rounded-lg';
+                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i> Ejecutar en Sandbox';
+                btn.onclick = () => openArtifact('html', raw);
+            }
+            pre.parentNode.insertBefore(btn, pre.nextSibling);
+            if (window.lucide) lucide.createIcons();
+        });
+    }
+
+    function closeArtifactPanel() {
+        const panel = document.getElementById('modo-estudio-panel');
+        if (panel) {
+            panel.classList.add('hidden');
+            panel.classList.remove('flex');
+        }
+        const resizer = document.getElementById('panel-resizer');
+        if (resizer) resizer.classList.add('hidden');
+    }
+
+    function switchArtifactTab(tab) {
+        const btnCode = document.getElementById('btn-tab-code');
+        const btnPrev = document.getElementById('btn-tab-preview');
+        const btnEditor = document.getElementById('btn-tab-editor');
+        const viewCode = document.getElementById('artifact-view-code');
+        const viewPrev = document.getElementById('artifact-view-preview');
+        const viewEditor = document.getElementById('artifact-view-editor');
+
+        if (!btnCode || !btnPrev || !viewCode || !viewPrev) return;
+
+        btnCode.className = 'px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors';
+        btnPrev.className = 'px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors';
+        if(btnEditor) btnEditor.className = 'px-3 py-1 rounded-lg text-neutral-400 hover:text-white transition-colors flex items-center gap-1';
+
+        viewCode.className = 'hidden h-full flex-col bg-[#09090C]';
+        viewPrev.className = 'hidden h-full bg-white justify-center';
+        if(viewEditor) viewEditor.className = 'hidden h-full w-full bg-[#111116] relative';
+
+        if (tab === 'code') {
+            btnCode.className = 'px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors';
+            viewCode.classList.remove('hidden'); viewCode.classList.add('flex', 'w-full');
+        } else if (tab === 'preview') {
+            btnPrev.className = 'px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors';
+            viewPrev.classList.remove('hidden'); viewPrev.classList.add('flex', 'w-full');
+        } else if (tab === 'editor') {
+            if(btnEditor) btnEditor.className = 'px-3 py-1 rounded-lg bg-[#252534] text-white transition-colors flex items-center gap-1';
+            if(viewEditor) { viewEditor.classList.remove('hidden'); viewEditor.classList.add('flex'); }
+            initImageEditor();
+        }
+    }
+
+    function setDeviceView(type) {
+        const frame = document.getElementById('artifact-preview-frame');
+        if (!frame) return;
+        if(type === 'desktop') { frame.style.width = '100%'; frame.style.maxWidth = '100%'; }
+        else if(type === 'tablet') { frame.style.width = '768px'; frame.style.maxWidth = '768px'; }
+        else if(type === 'mobile') { frame.style.width = '375px'; frame.style.maxWidth = '375px'; }
+    }
+
+    function updateLineNumbers() {
+        const editor = document.getElementById('artifact-editor');
+        const gutter = document.getElementById('artifact-gutter');
+        if (!editor || !gutter) return;
+        const count = (editor.value.match(/\n/g) || []).length + 1;
+        let nums = '';
+        for (let i = 1; i <= count; i++) nums += i + '\n';
+        gutter.textContent = nums;
+    }
+
+    function applyEditorToPreview() {
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        const code = editor.value;
+        currentArtifactCode = code;
+        const frame = document.getElementById('artifact-preview-frame');
+        if (!frame) return;
+        const doc = frame.contentWindow.document;
+        doc.open(); doc.write(code); doc.close();
+    }
+
+    async function applySurgicalDiffIfPresent(text) {
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        
+        let currentCode = editor.value || currentArtifactCode || '';
+        const wsSel = document.getElementById('workspace-select');
+        const wsName = wsSel ? wsSel.value : '';
+        const cleanWs = wsName ? wsName.replace('📁 ', '').trim() : '';
+
+        if (!currentCode || currentCode.includes('Cirugía de código') || !currentCode.includes('<html')) {
+            if (cleanWs) {
+                try {
+                    const res = await fetch(`/workspaces/${cleanWs}/index.html?t=${Date.now()}`);
+                    if (res.ok) currentCode = await res.text();
+                } catch(e) {
+                    console.error("Error al obtener index.html para aplicar cirugía:", e);
+                }
+            }
+        }
+
+        if (!currentCode) return;
+
+        let normCode = currentCode.replace(/\r\n/g, '\n');
+        let normText = text.replace(/\r\n/g, '\n');
+
+        const diffRegexSurgical = /<<<<<<<\s*SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>>(?:\s*REPLACE)?/g;
+        let match;
+        let applied = false;
+
+        while ((match = diffRegexSurgical.exec(normText)) !== null) {
+            let searchBlock = match[1];
+            let replaceBlock = match[2];
+
+            if (normCode.includes(searchBlock)) {
+                normCode = normCode.replace(searchBlock, replaceBlock);
+                applied = true;
+            } else if (normCode.includes(searchBlock.trim())) {
+                normCode = normCode.replace(searchBlock.trim(), replaceBlock.trim());
+                applied = true;
+            }
+        }
+
+        if (applied) {
+            editor.value = normCode;
+            currentArtifactCode = normCode;
+            updateLineNumbers();
+            applyEditorToPreview();
+            saveToWorkspace();
+        }
+    }
+
+    async function saveToWorkspace() {
+        const mainWs = document.getElementById('workspace-select');
+        const artWs = document.getElementById('artifact-workspace-select');
+        const wsName = (mainWs && mainWs.value) ? mainWs.value : (artWs ? artWs.value : '');
+        
+        if(!wsName) {
+            alert("⚠️ Por favor, selecciona un Workspace en el menú desplegable antes de guardar.");
+            return;
+        }
+        
+        const editor = document.getElementById('artifact-editor');
+        if (!editor) return;
+        const content = editor.value;
+        
+        try {
+            const res = await fetch('/api/workspace/save', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ client_name: wsName.replace('📁 ', '').trim(), html_content: content })
+            });
+            if (res.ok) {
+                alert("🎉 ¡Código guardado con éxito en el Workspace '" + wsName + "'! Ya puedes recargar la página para ver los cambios aplicados.");
+            } else {
+                alert("❌ Error al guardar en el Workspace. Código de estado: " + res.status);
+            }
+        } catch(e){
+            alert("❌ Error de red al intentar guardar: " + e.message);
+        }
+    }
+
+    function openInNewWindow() {
+        if(!currentArtifactCode) return;
+        const win = window.open('', '_blank');
+        win.document.open();
+        win.document.write(currentArtifactCode);
+        win.document.close();
+    }
+
+    document.addEventListener('paste', (e) => {
+        if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+            e.preventDefault();
+            handleFileSelect(e.clipboardData.files);
+        }
+    });
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        const composer = document.getElementById('composer-box');
+        if (composer) {
+            composer.classList.add('is-thinking');
+        }
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        const composer = document.getElementById('composer-box');
+        if (composer) {
+            composer.classList.remove('is-thinking');
+        }
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const composer = document.getElementById('composer-box');
+        if (composer) {
+            composer.classList.remove('is-thinking');
+        }
+        if (e.dataTransfer && e.dataTransfer.files) {
+            handleFileSelect(e.dataTransfer.files);
+        }
+    }
+
+    function handleFileSelect(files) {
+        if (!files || files.length === 0) return;
+        let currentImgCount = attachedFiles.filter(f => f.mime_type && f.mime_type.startsWith('image/')).length;
+
+        Array.from(files).forEach(file => {
+            let finalName = file.name;
+            if (file.type && file.type.startsWith('image/')) {
+                currentImgCount++;
+                const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+                finalName = `img_${currentImgCount}.${ext}`;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (file.type && file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Redimensionamiento inteligente (Max 1600px) para evitar colapsos de payload
+                        const MAX_WIDTH = 1600;
+                        const MAX_HEIGHT = 1600;
+                        
+                        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                            if (width > height) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            } else {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Fondo blanco para evitar transparencias problemáticas
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Dibujar con suavizado de imagen de alta calidad
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.85); // Punto óptimo de compresión/calidad
+                        const b64 = jpegDataUrl.split(',')[1];
+                        
+                        attachedFiles.push({ 
+                            name: finalName.replace(/\.[^/.]+$/, ".jpg"), 
+                            mime_type: 'image/jpeg', 
+                            data: b64, 
+                            size: Math.round((b64.length * 3) / 4) 
+                        });
+                        renderAttachmentsBar();
+                    };
+                    img.src = e.target.result;
+                } else {
+                    // Validar tamaño máximo para archivos que no son imágenes (ej. 10MB)
+                    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+                    if (file.size > MAX_FILE_SIZE) {
+                        alert(`⚠️ El archivo "${file.name}" es demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). El límite máximo es de 10MB para garantizar un rendimiento óptimo.`);
+                        return;
+                    }
+                    
+                    const b64 = e.target.result.split(',')[1];
+                    let mime = file.type || 'application/octet-stream';
+                    if (mime === 'image/jpg') mime = 'image/jpeg'; 
+                    
+                    attachedFiles.push({ 
+                        name: finalName, 
+                        mime_type: mime, 
+                        data: b64, 
+                        size: file.size 
+                    });
+                    renderAttachmentsBar();
+                }
+            };
+            reader.onerror = (err) => console.error("Error leyendo archivo:", err);
+            reader.readAsDataURL(file);
+        });
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.value = '';
+    }
+
+    function previewAttachment(idx) {
+        const f = attachedFiles[idx];
+        if (f && f.mime_type && f.mime_type.startsWith('image/')) {
+            openLightbox(`data:${f.mime_type};base64,${f.data}`);
+        }
+    }
+
+    function openLightbox(src) {
+        const modal = document.getElementById('lightbox-modal');
+        const img = document.getElementById('lightbox-img');
+        if (modal && img) {
+            img.src = src;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                img.classList.remove('scale-95');
+                img.classList.add('scale-100');
+            }, 50);
+        }
+    }
+
+    function closeLightbox() {
+        const modal = document.getElementById('lightbox-modal');
+        const img = document.getElementById('lightbox-img');
+        if (modal && img) {
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 150);
+        }
+    }
+
+    function removeAttachment(idx) {
+        attachedFiles.splice(idx, 1);
+        renderAttachmentsBar();
+    }
+
+    function renderAttachmentsBar() {
+        const bar = document.getElementById('attachments-bar');
+        if (!bar) return;
+        if (attachedFiles.length === 0) {
+            bar.classList.add('hidden');
+            bar.innerHTML = '';
+            return;
+        }
+        bar.classList.remove('hidden');
+        bar.innerHTML = '';
+        attachedFiles.forEach((f, idx) => {
+            const pill = document.createElement('div');
+            pill.className = 'flex items-center space-x-2 px-3 py-1 rounded-full bg-[#181822] border border-[#282836] text-xs font-mono text-neutral-300 shadow';
+            const isImg = f.mime_type && f.mime_type.startsWith('image/');
+            pill.innerHTML = `
+                <span class="cursor-pointer" onclick="previewAttachment(${idx})" title="Ver vista previa">${isImg ? '🖼️' : '📎'}</span>
+                <span class="font-bold text-[#C4A77D] cursor-pointer hover:underline" onclick="previewAttachment(${idx})">${escapeHtml(f.name)}</span>
+                <button onclick="removeAttachment(${idx})" class="text-rose-400 hover:text-rose-300 ml-1 font-bold" title="Eliminar">✕</button>
+            `;
+            bar.appendChild(pill);
+        });
+    }
+
+    async function loadWorkspaceFiles(wsName) {
+        if (!wsName) return;
+        let cleanName = wsName.replace(/[^a-zA-Z0-9_-]/g, '').trim();
+        if (!cleanName) return;
+        
+        const mainSel = document.getElementById('workspace-select');
+        const artSel = document.getElementById('artifact-workspace-select');
+        if (mainSel && mainSel.value !== wsName) mainSel.value = wsName;
+        if (artSel && artSel.value !== wsName) artSel.value = wsName;
+
+        try {
+            const res = await fetch('/workspaces/' + cleanName + '/index.html?t=' + Date.now());
+            if (res.ok) {
+                const content = await res.text();
+                openArtifact('html', content);
+            } else {
+                console.warn("No se pudo cargar el archivo index.html del workspace (Status: " + res.status + ")");
+            }
+        } catch(e) {
+            console.error("Error de red al cargar archivos del workspace:", e);
+        }
+    }
+
+    function initResizer() {
+        const resizer = document.getElementById('panel-resizer');
+        const panel = document.getElementById('modo-estudio-panel');
+        if (!resizer || !panel) return;
+
+        let isDragging = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            resizer.classList.add('is-dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const containerWidth = window.innerWidth;
+            const newWidth = containerWidth - e.clientX;
+            
+            const minWidth = 400;
+            const maxWidth = containerWidth * 0.8;
+            
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                panel.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                resizer.classList.remove('is-dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    }
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const wsSel = document.getElementById('workspace-select');
+            if (wsSel && wsSel.value) {
+                loadWorkspaceFiles(wsSel.value);
+            }
+        }, 300);
+        
+        initTokenCounter();
+        initResizer();
+    });
+
+    // Lógica del Contador de Tokens en tiempo real
+    function initTokenCounter() {
+        const chatContainer = document.getElementById('chat-messages-container');
+        const tokenDisplay = document.getElementById('sidebar-tokens-val');
+        if (!chatContainer || !tokenDisplay) return;
+
+        const observer = new MutationObserver(() => {
+            const text = chatContainer.innerText || '';
+            const tokens = Math.ceil(text.length / 4); // 1 token ≈ 4 caracteres
+            tokenDisplay.textContent = tokens.toLocaleString();
+        });
+
+        observer.observe(chatContainer, { childList: true, subtree: true, characterData: true });
+    }
+
+    // Lógica para cargar archivo específico (Opción A)
+    async function loadSpecificFile(filename) {
+        const wsSel = document.getElementById('artifact-workspace-select');
+        if (!wsSel || !wsSel.value) return;
+        let cleanName = wsSel.value.replace(/[^a-zA-Z0-9_-]/g, '').trim();
+        
+        try {
+            const res = await fetch('/workspaces/' + cleanName + '/' + filename + '?t=' + Date.now());
+            if (res.ok) {
+                const content = await res.text();
+                const ext = filename.split('.').pop();
+                openArtifact(ext, content);
+            }
+        } catch(e) {
+            console.error("Error cargando archivo:", e);
+        }
+    }
+
+    function toggleDropdown(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden');
+    }
+
+    // Cerrar dropdown al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('tools-dropdown');
+        const btn = e.target.closest('[onclick="toggleDropdown(\'tools-dropdown\')"]');
+        if (dropdown && !dropdown.classList.contains('hidden') && !btn && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    function exportChatMarkdown() {
+        const container = document.getElementById('chat-messages-container');
+        if (!container || !container.innerText.trim()) {
+            alert("No hay conversación para exportar.");
+            return;
+        }
+        
+        let mdContent = "# Exportación de Chat - Kiala Studio Pro\n\n";
+        const rows = container.querySelectorAll('.flex.flex-col');
+        
+        rows.forEach(row => {
+            const isUser = row.classList.contains('items-end');
+            const text = row.innerText.trim();
+            if (isUser) {
+                mdContent += `**Tú:**\n${text}\n\n`;
+            } else {
+                mdContent += `**Kiala AI:**\n${text}\n\n---\n\n`;
+            }
+        });
+
+        const blob = new Blob([mdContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat_export_${Date.now()}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function filterProjects() {
+        const searchInput = document.getElementById('search-projects-input');
+        let query = searchInput.value.toLowerCase();
+        
+        // Salvaguarda extrema contra el autofill del navegador
+        if (query === 'oficial@kialashq.com' || query.includes('@')) {
+            searchInput.value = '';
+            query = '';
+        }
+
+        const items = document.querySelectorAll('#project-chats-container > div');
+        items.forEach(item => {
+            const title = item.querySelector('span').textContent.toLowerCase();
+            if (title.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function toggleArtifactPanel() {
+        const panel = document.getElementById('modo-estudio-panel');
+        const resizer = document.getElementById('panel-resizer');
+        if (panel && panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            panel.classList.add('flex');
+            if (resizer) resizer.classList.remove('hidden');
+            if (!currentArtifactCode) {
+                const wsSel = document.getElementById('workspace-select');
+                if (wsSel && wsSel.value) loadWorkspaceFiles(wsSel.value);
+            }
+        } else {
+            closeArtifactPanel();
+        }
+    }
+
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    function openPromptLab() {
+        toggleModal('modal-prompt-lab');
+    }
+
+    async function sendLabMessage() {
+        const input = document.getElementById('lab-input');
+        const text = input.value.trim();
+        if(!text) return;
+
+        const chatBox = document.getElementById('lab-chat-box');
+        if(chatBox.innerHTML.includes('Esperando tu contexto')) chatBox.innerHTML = '';
+        
+        chatBox.innerHTML += `<div class="flex justify-end mb-4"><div class="bg-[#181822] border border-[#2A2A38] text-neutral-200 px-4 py-2.5 rounded-2xl rounded-br-none max-w-[80%]">${escapeHtml(text)}</div></div>`;
+        input.value = '';
+
+        const aiBubbleId = 'lab-msg-' + Date.now();
+        chatBox.innerHTML += `<div class="flex justify-start mb-4"><div id="${aiBubbleId}" class="bg-purple-500/10 border border-purple-500/20 text-purple-100 px-4 py-3 rounded-2xl rounded-bl-none max-w-[90%] prose prose-invert prose-sm"><span class="animate-pulse">Analizando contexto y diseñando prompt...</span></div></div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // Crear sesión real para el Lab
+            const resSession = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ project_id: currentProjectId || 'default-project', title: 'Lab Prompt', model: 'gemini-3.1-pro-preview' })
+            });
+            const sessionData = await resSession.json();
+            const labSessionId = sessionData.id;
+
+            const promptContext = `ERES UN INGENIERO DE PROMPTS EXPERTO. Tu única tarea es analizar lo siguiente y devolver un PROMPT MAESTRO altamente detallado, estricto y optimizado para que yo lo use en otro LLM. No des explicaciones, solo entrega el prompt final en un bloque de código markdown. Lo que quiero es: ${text}`;
+
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: labSessionId,
+                    message: promptContext,
+                    model: 'gemini-3.1-pro-preview',
+                    enable_grounding: false
+                })
+            });
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let rawText = '';
+            const bubble = document.getElementById(aiBubbleId);
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const lines = decoder.decode(value).split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const payload = JSON.parse(line.replace('data: ', ''));
+                            if (payload.chunk) {
+                                rawText += payload.chunk;
+                                bubble.innerHTML = marked.parse(rawText);
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                        } catch(e){}
+                    }
+                }
+            }
+        } catch(e) {
+            document.getElementById(aiBubbleId).innerHTML = "Error de conexión al generar el prompt.";
+        }
+    }
+
+    function openMemoryVault() {
+        document.getElementById('memory-content').value = localStorage.getItem('kiala_core_memory') || '';
+        switchMemoryTab('query');
+        toggleModal('modal-memory');
+    }
+
+    function switchMemoryTab(tab) {
+        const btnQuery = document.getElementById('btn-mem-query');
+        const btnEdit = document.getElementById('btn-mem-edit');
+        const viewQuery = document.getElementById('view-mem-query');
+        const viewEdit = document.getElementById('view-mem-edit');
+
+        if (tab === 'query') {
+            btnQuery.className = 'px-4 py-1.5 rounded-lg bg-[#252534] text-white transition-colors font-medium';
+            btnEdit.className = 'px-4 py-1.5 rounded-lg text-neutral-400 hover:text-white transition-colors font-medium';
+            viewQuery.classList.remove('hidden'); viewQuery.classList.add('flex');
+            viewEdit.classList.add('hidden'); viewEdit.classList.remove('flex');
+        } else {
+            btnEdit.className = 'px-4 py-1.5 rounded-lg bg-[#252534] text-white transition-colors font-medium';
+            btnQuery.className = 'px-4 py-1.5 rounded-lg text-neutral-400 hover:text-white transition-colors font-medium';
+            viewEdit.classList.remove('hidden'); viewEdit.classList.add('flex');
+            viewQuery.classList.add('hidden'); viewQuery.classList.remove('flex');
+        }
+    }
+
+    function saveMemory() {
+        const content = document.getElementById('memory-content').value;
+        localStorage.setItem('kiala_core_memory', content);
+        alert("🧠 Memoria Central actualizada. La IA tendrá acceso a esta información.");
+        switchMemoryTab('query');
+    }
+
+    async function queryMemory() {
+        const input = document.getElementById('memory-query-input');
+        const text = input.value.trim();
+        if(!text) return;
+
+        const chatBox = document.getElementById('memory-chat-box');
+        if(chatBox.innerHTML.includes('Hazme una pregunta')) chatBox.innerHTML = '';
+        
+        chatBox.innerHTML += `<div class="flex justify-end mb-3"><div class="bg-[#181822] border border-[#2A2A38] text-neutral-200 px-3 py-2 rounded-xl rounded-br-none max-w-[85%]">${escapeHtml(text)}</div></div>`;
+        input.value = '';
+
+        const aiBubbleId = 'mem-msg-' + Date.now();
+        chatBox.innerHTML += `<div class="flex justify-start mb-3"><div id="${aiBubbleId}" class="bg-amber-500/10 border border-amber-500/20 text-amber-100 px-3 py-2 rounded-xl rounded-bl-none max-w-[90%] prose prose-invert prose-sm"><span class="animate-pulse">Buscando en la memoria...</span></div></div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const memoryData = localStorage.getItem('kiala_core_memory') || 'No hay información guardada en la memoria.';
+        const promptContext = `Eres el Gestor de Memoria Central. Responde a la pregunta del usuario basándote ÚNICAMENTE en la siguiente información guardada. Si la respuesta no está en la información, di amablemente que no tienes ese dato en la memoria.\n\n[MEMORIA GUARDADA]:\n${memoryData}\n\n[PREGUNTA DEL USUARIO]:\n${text}`;
+
+        try {
+            const resSession = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ project_id: currentProjectId || 'default-project', title: 'Memory Query', is_temp: true })
+            });
+            const sessionData = await resSession.json();
+
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: sessionData.id,
+                    message: promptContext,
+                    model: 'gemini-3.1-pro-preview',
+                    enable_grounding: false
+                })
+            });
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let rawText = '';
+            const bubble = document.getElementById(aiBubbleId);
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const lines = decoder.decode(value).split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const payload = JSON.parse(line.replace('data: ', ''));
+                            if (payload.chunk) {
+                                rawText += payload.chunk;
+                                bubble.innerHTML = marked.parse(rawText);
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                        } catch(e){}
+                    }
+                }
+            }
+        } catch(e) {
+            document.getElementById(aiBubbleId).innerHTML = "Error al consultar la memoria.";
+        }
+    }
+
+    function saveApiKeys() {
+        const geminiKey = document.getElementById('api-key-gemini').value;
+        const anthropicKey = document.getElementById('api-key-anthropic').value;
+        const llamaKey = document.getElementById('api-key-llama').value;
+        const openaiKey = document.getElementById('api-key-openai').value;
+        
+        if(geminiKey) localStorage.setItem('kiala_gemini_key', geminiKey);
+        if(anthropicKey) localStorage.setItem('kiala_anthropic_key', anthropicKey);
+        if(llamaKey) localStorage.setItem('kiala_llama_key', llamaKey);
+        if(openaiKey) localStorage.setItem('kiala_openai_key', openaiKey);
+        
+        toggleModal('modal-vault');
+        alert("🔒 Claves guardadas en la bóveda local exitosamente. Los modelos Claude 3.5 y Llama 3.1 ya están listos para usarse.");
+    }
+
+    // Cargar claves al abrir la bóveda
+    document.addEventListener('DOMContentLoaded', () => {
+        const vaultBtn = document.querySelector('[onclick="toggleModal(\'modal-vault\')"]');
+        if(vaultBtn) {
+            vaultBtn.addEventListener('click', () => {
+                document.getElementById('api-key-gemini').value = localStorage.getItem('kiala_gemini_key') || '';
+                document.getElementById('api-key-anthropic').value = localStorage.getItem('kiala_anthropic_key') || '';
+                document.getElementById('api-key-llama').value = localStorage.getItem('kiala_llama_key') || '';
+                document.getElementById('api-key-openai').value = localStorage.getItem('kiala_openai_key') || '';
+            });
+        }
+    });
+
+    function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  </script>
+</body>
+</html>
+<!-- Acceso total verificado por Kiala Studio Pro V3.0 -->

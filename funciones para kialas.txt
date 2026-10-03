@@ -1,0 +1,47 @@
+--- TUS 9 REQUERIMIENTOS EN CRUDO (USER) ---
+
+te voy a comentar varias cosas que quiero. te pondre las ideas enumeradas y lo que aras sera agarrar mis ideas en crudo y perfeccionarlas para mejor funcionamiento y todo.
+1-si te fijas directamente en la web (img_1) justo al lado de modo estudio hay un bloque de codigo que no deveria estar ahi.
+2-el boton +chat no esta funcionando
+3-el panel izquierdo tiene varias funciones de chat que no necesito porque dice todos los workspace y hay mas chats lo cual es un poco enrredado por lo que me gustaria el panel izquierdo que sea solo de los chats fijos uno debajo del otro, algo mas censillo.
+4-en la barra de arriba me gustaria una funcion la cual sea algo como pront o ayuda de proyectos el cual sea un chat desechable, lo que aria seria que al yo entrar ahi me abrira un chat en el cual yo le comentaria o daria informacion sobre cualquier proyecto y use alguna super erramienta la cual respecto a lo que le pedi que investigue y me genere un pront super detallado para usarlo en algun chat nuevo o algo que necesite
+5-me hablastes de un selector de temas pero no tengo idea de que seria
+6-me gustaria tambien implementarle y conectarle funciones de google cloud/vertex ai para de alguna manera que implementes en algun chat ya sea con acceso desde cualquier chat o un sistema aparte el cual sea para crear/editar fotos y videos pero me gustaria implementar algo parecido a lo que tenemos para visualizar y editar los codigos y eso que seria quizas en el chat yo genere una imagen y pues poder tocar algo para que se divida la pantalla como el modo estudio y de un lado quede el chat u del otro lado quede la imagen o video y desde el chat poder editar la imagen en tiempo real. algo como. quiero que en esta imagen cambies el color de fondo, o le agregues a una persona o algo asi. 
+7-un problema con el que estuve lidiando es con el de la imagen (img_2) que el usuario y contraseña no estaban funcionanco por lo que tuve que editar algo el codigo para poder entrar aqui
+8-devemos tambien agregarle la opcion de los conectores para conectar mi google driver, mail y otras apps que creas necesarias.
+9-me gustaria implementar una funcion en la cual la cifemos de extremo a extremo la cual pida contraseña y esas cosas. pues la idea es que genere como un archivo texto o exel o algo a la cual yo le de informacion y siempre la tenga guardada ahi ya sea informacion importante por escrito o que yo le pase una imagen o captura de pantalla o algo y que extraiga la informacion que yo le diga y la almacene ahi pero en una memoria completa para cuando yo entre ejemplo y le diga. necesito el numero de SSN de mi compañia pues ella pueda revisar todo el contenido y darme exactamente lo que le pedi o de igual forma mis cuentas y contraseñas y me las de cuando se las pida ejemplo tambien que yo no recuerde si tengo cuenta de faceboock y yo le pregunte a ella y me diga pues si, tu faceboock es tal, usuario tal contraseña tal y otras cosas que se le asemejen a esta funcion.
+si en el camino se me ocurren mas ideas o a ti las agregamos al plan pero por ahora yo tengo esas ideas, si quieres tambien puedes implementar ideas. 
+la idea mia final es que ya esto cuando este listo no lo tendre solo aqui en local sino que revisaremos sobre mi dominio kialashq.com y veremos si podemos subirla a la red y ya cuando hagamos eso pues editaremos muchisimo el codigo para que tambien quede una version para ipgone quizas con algunas funciones menos pero optimizada al telefono como systema profecional y asistente, algo parecido a la app de muse de meta plataform que es un asistente que lee los correos, genera recordatorios, guarda informacion.
+
+=====================================================================================
+
+--- EL PLAN MAESTRO KIALA V4 COMPLETO (ASSISTANT) ---
+
+<div class="mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-medium text-indigo-300">⚡ Gemini 3.1 Pro Preview <span class="text-indigo-400/40">|</span> Arquitectura & Código</div>
+
+<div class="mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-medium text-indigo-300">⚡ Gemini 3.1 Pro Preview <span class="text-indigo-400/40">|</span> Arquitectura & Código</div>
+
+Me encanta tu visión. Lo que estás describiendo no es solo un chat, es un **Ecosistema de Asistencia Profesional** (estilo Meta Muse, pero con el toque de lujo de Kiala). Escalar esto a `kialashq.com` y optimizarlo para móvil es el camino correcto.
+
+He tomado tus 9 ideas en crudo, las he analizado y las he perfeccionado en un **Plan de Arquitectura**. Lo dividiremos en fases para no romper nada.
+
+---
+
+### 🗺️ Plan Maestro: Kiala Studio Pro V4
+
+#### Fase 1: Correcciones Inmediatas y UX (Tus puntos 1, 2, 3 y 7)
+*   **1. El código visible en Modo Estudio:** Ese es un residuo del parche anterior. Lo eliminaremos de raíz para que el panel quede impecable.
+*   **2. Botón +Chat roto:** Actualmente llama a una función que no existe (`promptCreateSessionInProject`). Lo conectaremos a la función nativa `createSession()` para que cree chats al instante.
+*   **3. Panel Izquierdo Simplificado:** Eliminaremos la vista de "Workspaces" que confunde. El panel será una lista plana y elegante de tus chats fijos, uno debajo del otro, listos para usar.
+*   **7. Login Roto:** Como aún no tenemos el backend de base de datos conectado para validar usuarios, dejaré un "bypass" elegante: el login aceptará tu correo `oficial@kialashq.com` y cualquier contraseña, dándote acceso directo sin errores.
+
+#### Fase 2: Nuevas Herramientas Core (Tus puntos 4, 5 y 8)
+*   **4. "Laboratorio de Prompts" (Chat Desechable):** Añadiremos un botón en la barra superior con un ícono de 🧪 (vaso de precipitados). Al abrirlo, será un chat aislado con un *System Prompt* oculto que le dirá a la IA: *"Eres un Ingeniero de Prompts. Ayuda al usuario a crear el prompt perfecto"*. No se guardará en tu historial para no ensuciarlo.
+*   **5. Selector de Temas (Aclaración):** Era una idea para cambiar los colores (ej. de Dorado a Neón Azul). Pero dado que el diseño actual (Dark & Gold) es la identidad de Kiala, **descartaremos esta idea** para mantener la exclusividad de la marca.
+*   **8. Conectores (Kiala Extensions):** Crearemos un panel de "Integraciones" donde podrás enlazar Google Drive, Gmail y Calendar mediante OAuth2. Así, cuando le pidas a Kiala que lea un correo, usará estas extensiones en segundo plano.
+
+#### Fase 3: Funciones Avanzadas y Seguridad (Tus puntos 6 y 9)
+*   **6. Estudio Multimedia (Vertex AI):** Evolucionaremos el "Modo Estudio". Si generas una imagen, la pantalla se dividirá: a la izquierda el chat, a la derecha el lienzo de la imagen. Podrás decirle: *"Cambia el fondo a rojo"*, y mediante la API de Imagen 3 de Vertex AI, aplicaremos *Inpainting* en tiempo real sobre el lienzo.
+*   **9. "Bóveda Kiala" (Memoria Cifrada):** Crearemos un sistema de almacenamiento cifrado de extremo a extremo (AES-256). Te pedirá una contraseña maestra para desbloquearse. Podrás subirle capturas de pantalla, la IA extraerá el texto (OCR) y guardará tus SSN, contraseñas o datos clave. Cuando le preguntes *"¿Cuál es mi Facebook?"*, Kiala buscará en la Bóveda (solo si está desbloqueada) y te responderá.
+
+---
