@@ -13,18 +13,14 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   
   <!-- NUEVOS ARCHIVOS DE UI -->
-  <link rel="stylesheet" href="/css/kiala-ui.css">
-  <script src="/js/kiala-ui.js" defer></script>
+  <link rel="stylesheet" href="css/kiala-ui.css">
+  <script src="js/kiala-ui.js" defer></script>
   <!-- Filerobot Image Editor (Alternativa a Canva) -->
   <script src="https://scaleflex.cloudimg.io/v7/plugins/filerobot-image-editor/latest/filerobot-image-editor.min.js"></script>
   
   <!-- SUPABASE (Base de Datos) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/supabase-client.js" defer></script>
-  
-  <!-- SUPABASE (Base de Datos) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/supabase-client.js" defer></script>
+  <script src="js/supabase-client.js" defer></script>
 
   <style>
     :root { font-size: 16px; }
@@ -180,7 +176,7 @@
         <i data-lucide="shield-check" class="w-6 h-6"></i>
       </div>
 
-      <img src="/static/logo.png" class="w-24 h-24 object-contain mt-4 mb-4 filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" onerror="this.style.display='none'">
+      <img src="logo.png" class="w-24 h-24 object-contain mt-4 mb-4 filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]" onerror="this.style.display='none'">
       <h2 class="text-2xl font-bold text-neutral-200 tracking-widest mb-1 brand-kiala">KIALA STUDIO</h2>
       <p class="text-[10px] text-neutral-500 mb-6 font-mono uppercase tracking-widest flex items-center gap-1.5">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Servidor Seguro Activo
@@ -237,7 +233,7 @@
     <div class="flex items-center space-x-4">
       <!-- SOLO LA K OCULTA/MUESTRA EL PANEL -->
       <button id="btn-k-toggle" onclick="toggleSidebar()" class="group flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[#16161D] transition" title="Alternar barra lateral">
-        <img src="/static/logo.png" class="h-14 w-14 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" alt="K" onerror="this.style.display='none'">
+        <img src="logo.png" class="h-14 w-14 object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" alt="K" onerror="this.style.display='none'">
       </button>
       <div class="flex items-baseline space-x-2 text-left">
         <span class="font-bold text-xl tracking-wider brand-kiala">KIALA'S</span>
@@ -327,7 +323,7 @@
     <!-- MAIN CHAT CANVAS -->
     <main id="main-content-canvas" class="flex-1 min-w-0 flex flex-col relative hero-active">
       <div id="hero-greeting-center" class="hidden flex-1 flex-col items-center justify-center p-6 text-center select-none">
-        <img src="/static/logo.png" class="w-80 h-80 object-contain mb-2 filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" onerror="this.style.display='none'">
+        <img src="logo.png" class="w-80 h-80 object-contain mb-2 filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]" onerror="this.style.display='none'">
         <h1 class="text-4xl font-medium text-neutral-200 tracking-tight mb-3">¡Es tu turno!</h1>
         <p class="text-base text-neutral-500 max-w-md">Kiala's AI Studio está listo. Explora tus proyectos o formula cualquier consulta.</p>
       </div>
@@ -1133,7 +1129,8 @@
         if (wsChoice === 'new') {
             // Crear nuevo workspace con index.html base
             finalWsName = nameInput.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now().toString().slice(-4);
-            const baseHtml = `<!DOCTYPE html>\n<html lang="es" class="dark">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${nameInput}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-[#050505] text-neutral-200 min-h-screen flex flex-col items-center justify-center font-sans">\n  <h1 class="text-4xl font-bold text-[#C4A77D] mb-4">¡Hola desde ${nameInput}!</h1>\n  <p class="text-neutral-500">Tu lienzo está listo. Pídele a la IA que empiece a diseñar.</p>\n</body>\n</html>`;
+            const baseHtml = `<!DOCTYPE html>\n<html lang="es" class="dark">\n<head>
+    <base href="http://localhost:8080/workspaces/kiala_frontend_dev/">\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${nameInput}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-[#050505] text-neutral-200 min-h-screen flex flex-col items-center justify-center font-sans">\n  <h1 class="text-4xl font-bold text-[#C4A77D] mb-4">¡Hola desde ${nameInput}!</h1>\n  <p class="text-neutral-500">Tu lienzo está listo. Pídele a la IA que empiece a diseñar.</p>\n</body>\n</html>`;
             
             try {
                 await fetch('/api/workspace/save', {
